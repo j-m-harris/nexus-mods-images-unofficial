@@ -1,0 +1,11 @@
+Browse the latest images on Nexus Mods. Discover screenshots, artwork, and mod images from thousands of games.
+
+Features:
+- Browse a feed of the newest images uploaded to Nexus Mods
+- Search images by keyword across all games
+- Filter by game, sorted by popularity
+- Filter by category with quick-access facets
+- Sort by newest, oldest, most viewed, top rated, or random
+- View full-size images with pinch-to-zoom
+- Infinite scroll for seamless browsing
+- Open any image or mod page directly on Nexus Mods

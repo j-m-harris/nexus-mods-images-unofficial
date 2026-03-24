@@ -85,10 +85,13 @@ class NexusGame {
   }
 
   String get formattedDownloads {
-    if (downloads >= 1000000000) return '${(downloads / 1000000000).toStringAsFixed(1)}B';
-    if (downloads >= 1000000) return '${(downloads / 1000000).toStringAsFixed(1)}M';
-    if (downloads >= 1000) return '${(downloads / 1000).toStringAsFixed(1)}K';
-    return '$downloads';
+    final s = downloads.toString();
+    final buf = StringBuffer();
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+      buf.write(s[i]);
+    }
+    return buf.toString();
   }
 }
 
