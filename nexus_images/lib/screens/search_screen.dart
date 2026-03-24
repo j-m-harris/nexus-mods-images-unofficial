@@ -134,7 +134,7 @@ class _SearchScreenState extends State<SearchScreen> {
                             style: const TextStyle(
                                 color: NexusColors.textPrimary)),
                         subtitle: Text(
-                          '${game.formattedDownloads} downloads · ${game.mods} mods',
+                          '${game.formattedDownloads} downloads · ${game.formattedMods} mods',
                           style: const TextStyle(
                               color: NexusColors.textMuted, fontSize: 12),
                         ),

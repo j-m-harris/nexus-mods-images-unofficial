@@ -1,14 +1,56 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/nexus_image.dart';
 import '../theme.dart';
 
-class ImageCard extends StatelessWidget {
+class ImageCard extends StatefulWidget {
   final NexusImage image;
   final VoidCallback onTap;
 
   const ImageCard({super.key, required this.image, required this.onTap});
+
+  @override
+  State<ImageCard> createState() => _ImageCardState();
+}
+
+class _ImageCardState extends State<ImageCard> {
+  bool _fullResReady = false;
+  Timer? _upgradeTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startUpgradeTimer();
+  }
+
+  @override
+  void didUpdateWidget(ImageCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.image.id != widget.image.id) {
+      _fullResReady = false;
+      _upgradeTimer?.cancel();
+      _startUpgradeTimer();
+    }
+  }
+
+  void _startUpgradeTimer() {
+    _upgradeTimer = Timer(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      final provider =
+          CachedNetworkImageProvider(widget.image.url);
+      precacheImage(provider, context).then((_) {
+        if (mounted) setState(() => _fullResReady = true);
+      }).catchError((_) {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _upgradeTimer?.cancel();
+    super.dispose();
+  }
 
   String _formatNumber(int n) {
     final s = n.toString();
@@ -38,6 +80,8 @@ class ImageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final image = widget.image;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -46,7 +90,6 @@ class ImageCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
             children: [
-              // Avatar
               Container(
                 width: 36,
                 height: 36,
@@ -73,7 +116,6 @@ class ImageCard extends StatelessWidget {
                         color: NexusColors.textPrimary, size: 20),
               ),
               const SizedBox(width: 10),
-              // Name + game
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,7 +143,6 @@ class ImageCard extends StatelessWidget {
                   ],
                 ),
               ),
-              // Time ago
               Text(
                 _timeAgo(image.createdAt),
                 style: const TextStyle(
@@ -119,33 +160,49 @@ class ImageCard extends StatelessWidget {
           ),
         ),
 
-        // --- Full-width image ---
+        // --- Full-width image (silently upgrades to full res) ---
         GestureDetector(
-          onTap: onTap,
+          onTap: widget.onTap,
           child: AspectRatio(
             aspectRatio: 16 / 9,
-            child: CachedNetworkImage(
-              imageUrl: image.thumbnailUrl,
-              fit: BoxFit.cover,
-              width: double.infinity,
-              placeholder: (_, __) => Container(
-                color: NexusColors.imagePlaceholder,
-                child: const Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: NexusColors.primary,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Thumbnail (always present)
+                CachedNetworkImage(
+                  imageUrl: image.thumbnailUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => Container(
+                    color: NexusColors.imagePlaceholder,
+                    child: const Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: NexusColors.primary,
+                        ),
+                      ),
                     ),
                   ),
+                  errorWidget: (_, __, ___) => Container(
+                    color: NexusColors.imagePlaceholder,
+                    child: const Icon(Icons.broken_image,
+                        color: NexusColors.textMuted),
+                  ),
                 ),
-              ),
-              errorWidget: (_, __, ___) => Container(
-                color: NexusColors.imagePlaceholder,
-                child: const Icon(Icons.broken_image,
-                    color: NexusColors.textMuted),
-              ),
+                // Full-res overlay (fades in when ready)
+                AnimatedOpacity(
+                  opacity: _fullResReady ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 500),
+                  child: _fullResReady
+                      ? CachedNetworkImage(
+                          imageUrl: image.url,
+                          fit: BoxFit.cover,
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ],
             ),
           ),
         ),
@@ -244,6 +301,7 @@ class ImageCard extends StatelessWidget {
   }
 
   void _showMoreMenu(BuildContext context) {
+    final image = widget.image;
     showModalBottomSheet(
       context: context,
       backgroundColor: NexusColors.surface,

@@ -84,8 +84,8 @@ class NexusGame {
     );
   }
 
-  String get formattedDownloads {
-    final s = downloads.toString();
+  static String _commaFormat(int n) {
+    final s = n.toString();
     final buf = StringBuffer();
     for (var i = 0; i < s.length; i++) {
       if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
@@ -93,6 +93,9 @@ class NexusGame {
     }
     return buf.toString();
   }
+
+  String get formattedDownloads => _commaFormat(downloads);
+  String get formattedMods => _commaFormat(mods);
 }
 
 class FacetItem {
