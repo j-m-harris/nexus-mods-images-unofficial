@@ -545,8 +545,6 @@
                 filter.generalSearch = [{ value: search, op: 'EQUALS' }];
             }
 
-            // category can't be filtered server-side, applied client-side in renderCards
-
             let sort;
             if (sortVal === 'random') {
                 sort = [{ random: { seed: Math.floor(Math.random() * 100000) } }];
@@ -557,7 +555,11 @@
                 sort = [{ [field]: { direction: dir } }];
             }
 
-            const facets = { category: [] };
+            const facets = {
+                category: activeFacets.category?.size
+                    ? [...activeFacets.category]
+                    : []
+            };
 
             return { facets, filter, sort, offset, count };
         }
@@ -769,22 +771,16 @@
         // --- Shared rendering ---
 
         function renderCards(nodes, append) {
-            console.debug('renderCards', { nodes: nodes.length, append, activeCategoryFacets: activeFacets.category?.size || 0 });
+            console.debug('renderCards', { nodes: nodes.length, append });
             const grid = document.getElementById('grid');
             if (!append) grid.innerHTML = '';
 
-            // Client-side category filter (not available as a server filter)
-            let filtered = nodes;
-            if (activeFacets.category?.size) {
-                filtered = nodes.filter(img => activeFacets.category.has(img.category?.name));
-            }
-
-            if (filtered.length === 0 && !append) {
+            if (nodes.length === 0 && !append) {
                 grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#888;padding:2rem;">No images found.</p>';
                 return;
             }
 
-            for (const img of filtered) {
+            for (const img of nodes) {
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.innerHTML = `
