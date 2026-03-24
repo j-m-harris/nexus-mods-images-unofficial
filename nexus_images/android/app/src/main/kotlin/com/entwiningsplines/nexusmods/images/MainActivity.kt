@@ -1,4 +1,4 @@
-package com.example.nexus_images
+package com.entwiningsplines.nexusmods.images
 
 import io.flutter.embedding.android.FlutterActivity
 
