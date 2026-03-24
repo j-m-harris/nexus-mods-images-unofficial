@@ -366,9 +366,11 @@
         }
 
         function filterGameList() {
+            const select = document.getElementById('gameSelect');
             const query = document.getElementById('gameFilter').value.toLowerCase().trim();
             if (!query) {
                 populateGameSelect(allGames);
+                select.value = '';
                 return;
             }
             const filtered = allGames.filter(g =>
@@ -376,6 +378,10 @@
                 g.domain_name.toLowerCase().includes(query)
             );
             populateGameSelect(filtered);
+            // Auto-select the first matching game
+            if (filtered.length > 0) {
+                select.value = String(filtered[0].id);
+            }
         }
 
         const QUERY = `
