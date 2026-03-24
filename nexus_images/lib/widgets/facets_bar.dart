@@ -14,6 +14,12 @@ class FacetsBar extends StatelessWidget {
     required this.onToggle,
   });
 
+  String _formatCount(int n) {
+    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
+    return '$n';
+  }
+
   @override
   Widget build(BuildContext context) {
     final groups = <String, List<FacetItem>>{};
@@ -28,7 +34,6 @@ class FacetsBar extends StatelessWidget {
     }
 
     categoryItems.sort((a, b) => b.count.compareTo(a.count));
-    final top = categoryItems.take(10).toList();
 
     return Container(
       height: 100,
@@ -42,10 +47,10 @@ class FacetsBar extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: top.length,
+        itemCount: categoryItems.length,
         separatorBuilder: (_, __) => const SizedBox(width: 16),
         itemBuilder: (_, i) {
-          final item = top[i];
+          final item = categoryItems[i];
           final isActive =
               activeFacets['category']?.contains(item.value) ?? false;
           return GestureDetector(
@@ -55,8 +60,8 @@ class FacetsBar extends StatelessWidget {
               child: Column(
                 children: [
                   Container(
-                    width: 56,
-                    height: 56,
+                    width: 50,
+                    height: 50,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: isActive
@@ -79,14 +84,12 @@ class FacetsBar extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        item.value.isNotEmpty
-                            ? item.value[0].toUpperCase()
-                            : '?',
+                        _formatCount(item.count),
                         style: TextStyle(
                           color: isActive
                               ? NexusColors.textPrimary
                               : NexusColors.textMuted,
-                          fontSize: 20,
+                          fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -101,7 +104,7 @@ class FacetsBar extends StatelessWidget {
                           ? NexusColors.textPrimary
                           : NexusColors.textMuted,
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
                   ),

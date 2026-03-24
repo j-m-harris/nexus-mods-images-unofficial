@@ -10,6 +10,16 @@ class ImageCard extends StatelessWidget {
 
   const ImageCard({super.key, required this.image, required this.onTap});
 
+  String _formatNumber(int n) {
+    final s = n.toString();
+    final buf = StringBuffer();
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+      buf.write(s[i]);
+    }
+    return buf.toString();
+  }
+
   String _timeAgo(String? dateStr) {
     if (dateStr == null) return '';
     try {
@@ -149,7 +159,7 @@ class ImageCard extends StatelessWidget {
                   color: NexusColors.textSecondary, size: 22),
               const SizedBox(width: 6),
               Text(
-                '${image.views}',
+                _formatNumber(image.views),
                 style: const TextStyle(
                     color: NexusColors.textSecondary, fontSize: 14),
               ),

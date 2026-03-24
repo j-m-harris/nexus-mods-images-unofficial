@@ -68,7 +68,7 @@ class LightboxView extends StatelessWidget {
                               image.gameName ?? '',
                               'by ${image.ownerName ?? 'Unknown'}',
                               dateStr,
-                              '${image.views} views',
+                              '${_formatNumber(image.views)} views',
                               '${image.rating} rating',
                             ].where((s) => s.isNotEmpty).join(' · '),
                             style: const TextStyle(
@@ -123,6 +123,16 @@ class LightboxView extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatNumber(int n) {
+    final s = n.toString();
+    final buf = StringBuffer();
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+      buf.write(s[i]);
+    }
+    return buf.toString();
   }
 
   Widget _linkButton(String label, String url) {

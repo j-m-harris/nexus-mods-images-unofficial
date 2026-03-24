@@ -133,6 +133,11 @@ class _SearchScreenState extends State<SearchScreen> {
                         title: Text(game.name,
                             style: const TextStyle(
                                 color: NexusColors.textPrimary)),
+                        subtitle: Text(
+                          '${game.formattedDownloads} downloads · ${game.mods} mods',
+                          style: const TextStyle(
+                              color: NexusColors.textMuted, fontSize: 12),
+                        ),
                         selected: _selectedGameId == game.id,
                         selectedColor: NexusColors.primary,
                         onTap: () {

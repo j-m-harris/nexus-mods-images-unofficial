@@ -64,12 +64,14 @@ class NexusGame {
   final String name;
   final String domainName;
   final int downloads;
+  final int mods;
 
   NexusGame({
     required this.id,
     required this.name,
     required this.domainName,
     required this.downloads,
+    required this.mods,
   });
 
   factory NexusGame.fromJson(Map<String, dynamic> json) {
@@ -78,7 +80,15 @@ class NexusGame {
       name: json['name'] ?? '',
       domainName: json['domain_name'] ?? '',
       downloads: json['downloads'] ?? 0,
+      mods: json['mods'] ?? 0,
     );
+  }
+
+  String get formattedDownloads {
+    if (downloads >= 1000000000) return '${(downloads / 1000000000).toStringAsFixed(1)}B';
+    if (downloads >= 1000000) return '${(downloads / 1000000).toStringAsFixed(1)}M';
+    if (downloads >= 1000) return '${(downloads / 1000).toStringAsFixed(1)}K';
+    return '$downloads';
   }
 }
 

@@ -35,6 +35,21 @@ class _HomeScreenState extends State<HomeScreen> {
   SortOption _sort = SortOption.newest;
   int _perPage = 20;
 
+  bool get _hasActiveSearch =>
+      (_searchText != null && _searchText!.isNotEmpty) || _gameId != null;
+
+  String get _searchSummary {
+    final parts = <String>[];
+    if (_searchText != null && _searchText!.isNotEmpty) {
+      parts.add('"$_searchText"');
+    }
+    if (_gameId != null) {
+      final game = _games.where((g) => g.id == _gameId).firstOrNull;
+      if (game != null) parts.add(game.name);
+    }
+    return parts.join(' in ');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -176,13 +191,40 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: NexusColors.background,
       appBar: AppBar(
         backgroundColor: NexusColors.surface,
-        title: const Text(
-          'Nexus Mods Images',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: NexusColors.primary,
-          ),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/icon.png',
+              width: 28,
+              height: 28,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Nexus Mods Images',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: NexusColors.primary,
+                    ),
+                  ),
+                  if (_hasActiveSearch)
+                    Text(
+                      _searchSummary,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: NexusColors.textMuted,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           if (_currentTab == 0)
@@ -226,7 +268,17 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentTab,
-        onTap: (i) => setState(() => _currentTab = i),
+        onTap: (i) {
+          if (i == 0 && _hasActiveSearch) {
+            _searchText = null;
+            _gameId = null;
+            _sort = SortOption.newest;
+            _activeFacets = {};
+            if (_scrollController.hasClients) _scrollController.jumpTo(0);
+            _performSearch();
+          }
+          setState(() => _currentTab = i);
+        },
         backgroundColor: NexusColors.surface,
         selectedItemColor: NexusColors.primary,
         unselectedItemColor: NexusColors.textMuted,
