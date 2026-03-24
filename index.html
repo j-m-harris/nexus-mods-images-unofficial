@@ -165,6 +165,18 @@
             gap: 0.75rem;
         }
 
+        .card-link {
+            display: block;
+            margin-top: 0.4rem;
+            font-size: 0.75rem;
+            color: #d35400;
+            text-decoration: none;
+        }
+
+        .card-link:hover {
+            text-decoration: underline;
+        }
+
         .pagination {
             display: flex;
             justify-content: center;
@@ -300,7 +312,7 @@
             <label>Mode</label>
             <select id="modeSelect">
                 <option value="paginated">Paginated</option>
-                <option value="infinite">Infinite Scroll</option>
+                <option value="infinite" selected>Infinite Scroll</option>
             </select>
         </div>
         <div class="control-group">
@@ -409,6 +421,7 @@
                             views
                             rating
                             createdAt
+                            siteUrl
                             game {
                                 name
                                 domainName
@@ -653,6 +666,7 @@
                                 <span>${img.rating} rating</span>
                             </div>
                         </div>
+                        ${img.siteUrl ? `<a class="card-link" href="${escapeHtml(img.siteUrl)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">View on Nexus Mods</a>` : ''}
                     </div>
                 `;
                 card.addEventListener('click', () => openLightbox(img));
@@ -736,6 +750,7 @@
                 ${img.rating} rating
                 ${img.description ? '<br>' + escapeHtml(img.description) : ''}
                 <br><a href="${escapeHtml(img.url)}" target="_blank" rel="noopener">Full Image</a>
+                ${img.siteUrl ? ` &middot; <a href="${escapeHtml(img.siteUrl)}" target="_blank" rel="noopener">View on Nexus Mods</a>` : ''}
             `;
 
             lightbox.classList.add('active');
