@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/nexus_image.dart';
 import '../services/nexus_api.dart';
+import '../theme.dart';
 
 class SearchScreen extends StatefulWidget {
   final List<NexusGame> games;
@@ -42,7 +43,7 @@ class _SearchScreenState extends State<SearchScreen> {
   void _showGamePicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF16213E),
+      backgroundColor: NexusColors.surface,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
@@ -59,7 +60,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2A2A4A),
+                    color: NexusColors.border,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -68,11 +69,11 @@ class _SearchScreenState extends State<SearchScreen> {
                   child: TextField(
                     controller: _gameFilterController,
                     style: const TextStyle(
-                        color: Color(0xFFE0E0E0), fontSize: 14),
+                        color: NexusColors.textPrimary, fontSize: 14),
                     decoration: const InputDecoration(
                       hintText: 'Search games...',
                       prefixIcon: Icon(Icons.search,
-                          color: Color(0xFF888888), size: 20),
+                          color: NexusColors.textMuted, size: 20),
                     ),
                     onChanged: (val) {
                       final lower = val.toLowerCase();
@@ -97,14 +98,15 @@ class _SearchScreenState extends State<SearchScreen> {
                       if (i == 0) {
                         return ListTile(
                           leading: const CircleAvatar(
-                            backgroundColor: Color(0xFF2A2A4A),
+                            backgroundColor: NexusColors.border,
                             child: Icon(Icons.apps,
-                                color: Color(0xFF888888), size: 18),
+                                color: NexusColors.textMuted, size: 18),
                           ),
                           title: const Text('All Games',
-                              style: TextStyle(color: Color(0xFFE0E0E0))),
+                              style:
+                                  TextStyle(color: NexusColors.textPrimary)),
                           selected: _selectedGameId == null,
-                          selectedColor: const Color(0xFFD35400),
+                          selectedColor: NexusColors.primary,
                           onTap: () {
                             setState(() {
                               _selectedGameId = null;
@@ -118,21 +120,21 @@ class _SearchScreenState extends State<SearchScreen> {
                       final game = filtered[i - 1];
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: const Color(0xFF2A2A4A),
+                          backgroundColor: NexusColors.border,
                           child: Text(
                             game.name.isNotEmpty
                                 ? game.name[0].toUpperCase()
                                 : '?',
                             style: const TextStyle(
-                                color: Color(0xFFD35400),
+                                color: NexusColors.primary,
                                 fontWeight: FontWeight.bold),
                           ),
                         ),
                         title: Text(game.name,
-                            style:
-                                const TextStyle(color: Color(0xFFE0E0E0))),
+                            style: const TextStyle(
+                                color: NexusColors.textPrimary)),
                         selected: _selectedGameId == game.id,
-                        selectedColor: const Color(0xFFD35400),
+                        selectedColor: NexusColors.primary,
                         onTap: () {
                           setState(() {
                             _selectedGameId = game.id;
@@ -163,13 +165,14 @@ class _SearchScreenState extends State<SearchScreen> {
           // Search field
           TextField(
             controller: _searchController,
-            style: const TextStyle(color: Color(0xFFE0E0E0), fontSize: 16),
+            style:
+                const TextStyle(color: NexusColors.textPrimary, fontSize: 16),
             decoration: InputDecoration(
               hintText: 'Search images...',
               prefixIcon:
-                  const Icon(Icons.search, color: Color(0xFF888888)),
+                  const Icon(Icons.search, color: NexusColors.textMuted),
               filled: true,
-              fillColor: const Color(0xFF16213E),
+              fillColor: NexusColors.surface,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -183,7 +186,7 @@ class _SearchScreenState extends State<SearchScreen> {
           const Text('GAME',
               style: TextStyle(
                   fontSize: 11,
-                  color: Color(0xFF888888),
+                  color: NexusColors.textMuted,
                   letterSpacing: 1)),
           const SizedBox(height: 8),
           GestureDetector(
@@ -192,27 +195,27 @@ class _SearchScreenState extends State<SearchScreen> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               decoration: BoxDecoration(
-                color: const Color(0xFF16213E),
+                color: NexusColors.surface,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
                   const Icon(Icons.games_outlined,
-                      color: Color(0xFF888888), size: 20),
+                      color: NexusColors.textMuted, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       _selectedGameName ?? 'All Games',
                       style: TextStyle(
                         color: _selectedGameName != null
-                            ? const Color(0xFFE0E0E0)
-                            : const Color(0xFF888888),
+                            ? NexusColors.textPrimary
+                            : NexusColors.textMuted,
                         fontSize: 14,
                       ),
                     ),
                   ),
                   const Icon(Icons.chevron_right,
-                      color: Color(0xFF888888), size: 20),
+                      color: NexusColors.textMuted, size: 20),
                 ],
               ),
             ),
@@ -223,7 +226,7 @@ class _SearchScreenState extends State<SearchScreen> {
           const Text('SORT BY',
               style: TextStyle(
                   fontSize: 11,
-                  color: Color(0xFF888888),
+                  color: NexusColors.textMuted,
                   letterSpacing: 1)),
           const SizedBox(height: 8),
           Wrap(
@@ -238,16 +241,16 @@ class _SearchScreenState extends State<SearchScreen> {
                       horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
                     color: isActive
-                        ? const Color(0xFFD35400)
-                        : const Color(0xFF16213E),
+                        ? NexusColors.primary
+                        : NexusColors.surface,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     s.label,
                     style: TextStyle(
                       color: isActive
-                          ? Colors.white
-                          : const Color(0xFF888888),
+                          ? NexusColors.textPrimary
+                          : NexusColors.textMuted,
                       fontSize: 13,
                       fontWeight:
                           isActive ? FontWeight.w600 : FontWeight.normal,
@@ -263,7 +266,7 @@ class _SearchScreenState extends State<SearchScreen> {
           const Text('RESULTS PER PAGE',
               style: TextStyle(
                   fontSize: 11,
-                  color: Color(0xFF888888),
+                  color: NexusColors.textMuted,
                   letterSpacing: 1)),
           const SizedBox(height: 8),
           Row(
@@ -273,12 +276,12 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: TextField(
                   controller: TextEditingController(text: '$_perPage'),
                   keyboardType: TextInputType.number,
-                  style:
-                      const TextStyle(color: Color(0xFFE0E0E0), fontSize: 14),
+                  style: const TextStyle(
+                      color: NexusColors.textPrimary, fontSize: 14),
                   textAlign: TextAlign.center,
                   decoration: InputDecoration(
                     filled: true,
-                    fillColor: const Color(0xFF16213E),
+                    fillColor: NexusColors.surface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -294,7 +297,8 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
               const SizedBox(width: 10),
               const Text('(1-50)',
-                  style: TextStyle(color: Color(0xFF666666), fontSize: 12)),
+                  style:
+                      TextStyle(color: NexusColors.darkBrown, fontSize: 12)),
             ],
           ),
           const SizedBox(height: 32),
@@ -311,7 +315,8 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
               ),
               child: const Text('Search',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  style:
+                      TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             ),
           ),
         ],

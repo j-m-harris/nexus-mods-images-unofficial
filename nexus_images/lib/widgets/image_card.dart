@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/nexus_image.dart';
+import '../theme.dart';
 
 class ImageCard extends StatelessWidget {
   final NexusImage image;
@@ -42,9 +43,9 @@ class ImageCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: const LinearGradient(
-                    colors: [Color(0xFFD35400), Color(0xFFE67E22)],
+                    colors: [NexusColors.primary, NexusColors.primaryLight],
                   ),
-                  border: Border.all(color: const Color(0xFF2A2A4A), width: 1),
+                  border: Border.all(color: NexusColors.border, width: 1),
                 ),
                 child: image.ownerAvatar != null
                     ? ClipOval(
@@ -53,12 +54,13 @@ class ImageCard extends StatelessWidget {
                           fit: BoxFit.cover,
                           errorWidget: (_, __, ___) => const Icon(
                             Icons.person,
-                            color: Colors.white,
+                            color: NexusColors.textPrimary,
                             size: 20,
                           ),
                         ),
                       )
-                    : const Icon(Icons.person, color: Colors.white, size: 20),
+                    : const Icon(Icons.person,
+                        color: NexusColors.textPrimary, size: 20),
               ),
               const SizedBox(width: 10),
               // Name + game
@@ -69,7 +71,7 @@ class ImageCard extends StatelessWidget {
                     Text(
                       image.ownerName ?? 'Unknown',
                       style: const TextStyle(
-                        color: Color(0xFFE0E0E0),
+                        color: NexusColors.textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -80,7 +82,7 @@ class ImageCard extends StatelessWidget {
                       Text(
                         image.gameName!,
                         style: const TextStyle(
-                          color: Color(0xFF888888),
+                          color: NexusColors.textMuted,
                           fontSize: 12,
                         ),
                         maxLines: 1,
@@ -93,16 +95,15 @@ class ImageCard extends StatelessWidget {
               Text(
                 _timeAgo(image.createdAt),
                 style: const TextStyle(
-                  color: Color(0xFF666666),
+                  color: NexusColors.darkBrown,
                   fontSize: 12,
                 ),
               ),
-              // More menu
               const SizedBox(width: 4),
               GestureDetector(
                 onTap: () => _showMoreMenu(context),
                 child: const Icon(Icons.more_vert,
-                    color: Color(0xFF888888), size: 20),
+                    color: NexusColors.textMuted, size: 20),
               ),
             ],
           ),
@@ -111,7 +112,6 @@ class ImageCard extends StatelessWidget {
         // --- Full-width image ---
         GestureDetector(
           onTap: onTap,
-          onDoubleTap: () {}, // Could add "like" animation later
           child: AspectRatio(
             aspectRatio: 16 / 9,
             child: CachedNetworkImage(
@@ -119,22 +119,22 @@ class ImageCard extends StatelessWidget {
               fit: BoxFit.cover,
               width: double.infinity,
               placeholder: (_, __) => Container(
-                color: const Color(0xFF0F0F23),
+                color: NexusColors.imagePlaceholder,
                 child: const Center(
                   child: SizedBox(
                     width: 24,
                     height: 24,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Color(0xFFD35400),
+                      color: NexusColors.primary,
                     ),
                   ),
                 ),
               ),
               errorWidget: (_, __, ___) => Container(
-                color: const Color(0xFF0F0F23),
-                child:
-                    const Icon(Icons.broken_image, color: Color(0xFF888888)),
+                color: NexusColors.imagePlaceholder,
+                child: const Icon(Icons.broken_image,
+                    color: NexusColors.textMuted),
               ),
             ),
           ),
@@ -146,21 +146,21 @@ class ImageCard extends StatelessWidget {
           child: Row(
             children: [
               const Icon(Icons.visibility_outlined,
-                  color: Color(0xFFE0E0E0), size: 22),
+                  color: NexusColors.textSecondary, size: 22),
               const SizedBox(width: 6),
               Text(
                 '${image.views}',
                 style: const TextStyle(
-                    color: Color(0xFFE0E0E0), fontSize: 14),
+                    color: NexusColors.textSecondary, fontSize: 14),
               ),
               const SizedBox(width: 18),
               const Icon(Icons.star_border_rounded,
-                  color: Color(0xFFE0E0E0), size: 22),
+                  color: NexusColors.textSecondary, size: 22),
               const SizedBox(width: 6),
               Text(
                 '${image.rating}',
                 style: const TextStyle(
-                    color: Color(0xFFE0E0E0), fontSize: 14),
+                    color: NexusColors.textSecondary, fontSize: 14),
               ),
               const Spacer(),
               if (image.categoryName != null)
@@ -168,13 +168,13 @@ class ImageCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFF2A2A4A)),
+                    border: Border.all(color: NexusColors.border),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     image.categoryName!,
                     style: const TextStyle(
-                        color: Color(0xFF888888), fontSize: 11),
+                        color: NexusColors.textMuted, fontSize: 11),
                   ),
                 ),
               const SizedBox(width: 10),
@@ -186,7 +186,7 @@ class ImageCard extends StatelessWidget {
                   }
                 },
                 child: const Icon(Icons.open_in_new_rounded,
-                    color: Color(0xFFD35400), size: 20),
+                    color: NexusColors.primary, size: 20),
               ),
             ],
           ),
@@ -199,7 +199,8 @@ class ImageCard extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             text: TextSpan(
-              style: const TextStyle(fontSize: 13, color: Color(0xFFE0E0E0)),
+              style: const TextStyle(
+                  fontSize: 13, color: NexusColors.textPrimary),
               children: [
                 TextSpan(
                   text: '${image.ownerName ?? 'Unknown'} ',
@@ -207,7 +208,7 @@ class ImageCard extends StatelessWidget {
                 ),
                 TextSpan(
                   text: image.displayTitle,
-                  style: const TextStyle(color: Color(0xFFCCCCCC)),
+                  style: const TextStyle(color: NexusColors.warmTan),
                 ),
               ],
             ),
@@ -219,17 +220,15 @@ class ImageCard extends StatelessWidget {
             padding: const EdgeInsets.only(left: 12, right: 12, top: 3),
             child: Text(
               image.description!,
-              style:
-                  const TextStyle(color: Color(0xFF888888), fontSize: 12),
+              style: const TextStyle(
+                  color: NexusColors.textMuted, fontSize: 12),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
 
         const SizedBox(height: 4),
-
-        // --- Divider between posts ---
-        const Divider(color: Color(0xFF2A2A4A), height: 1, thickness: 0.5),
+        const Divider(color: NexusColors.border, height: 1, thickness: 0.5),
       ],
     );
   }
@@ -237,7 +236,7 @@ class ImageCard extends StatelessWidget {
   void _showMoreMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF16213E),
+      backgroundColor: NexusColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
       ),
@@ -250,16 +249,16 @@ class ImageCard extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFF2A2A4A),
+                color: NexusColors.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
             if (image.siteUrl != null)
               ListTile(
-                leading: const Icon(Icons.open_in_new,
-                    color: Color(0xFFD35400)),
+                leading:
+                    const Icon(Icons.open_in_new, color: NexusColors.primary),
                 title: const Text('View on Nexus Mods',
-                    style: TextStyle(color: Color(0xFFE0E0E0))),
+                    style: TextStyle(color: NexusColors.textPrimary)),
                 onTap: () {
                   Navigator.pop(ctx);
                   launchUrl(Uri.parse(image.siteUrl!),
@@ -268,9 +267,9 @@ class ImageCard extends StatelessWidget {
               ),
             ListTile(
               leading:
-                  const Icon(Icons.fullscreen, color: Color(0xFFD35400)),
+                  const Icon(Icons.fullscreen, color: NexusColors.primary),
               title: const Text('View Full Image',
-                  style: TextStyle(color: Color(0xFFE0E0E0))),
+                  style: TextStyle(color: NexusColors.textPrimary)),
               onTap: () {
                 Navigator.pop(ctx);
                 launchUrl(Uri.parse(image.url),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/nexus_image.dart';
+import '../theme.dart';
 
 class FacetsBar extends StatelessWidget {
   final List<FacetItem> facets;
@@ -33,9 +34,9 @@ class FacetsBar extends StatelessWidget {
       height: 100,
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: const BoxDecoration(
-        color: Color(0xFF16213E),
+        color: NexusColors.surface,
         border: Border(
-          bottom: BorderSide(color: Color(0xFF2A2A4A), width: 0.5),
+          bottom: BorderSide(color: NexusColors.border, width: 0.5),
         ),
       ),
       child: ListView.separated(
@@ -53,7 +54,6 @@ class FacetsBar extends StatelessWidget {
               width: 68,
               child: Column(
                 children: [
-                  // Circle icon (stories-style)
                   Container(
                     width: 56,
                     height: 56,
@@ -64,16 +64,16 @@ class FacetsBar extends StatelessWidget {
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                               colors: [
-                                Color(0xFFD35400),
-                                Color(0xFFE67E22),
+                                NexusColors.primary,
+                                NexusColors.primaryLight,
                               ],
                             )
                           : null,
-                      color: isActive ? null : const Color(0xFF1A1A2E),
+                      color: isActive ? null : NexusColors.background,
                       border: Border.all(
                         color: isActive
                             ? Colors.transparent
-                            : const Color(0xFF2A2A4A),
+                            : NexusColors.border,
                         width: 2,
                       ),
                     ),
@@ -84,8 +84,8 @@ class FacetsBar extends StatelessWidget {
                             : '?',
                         style: TextStyle(
                           color: isActive
-                              ? Colors.white
-                              : const Color(0xFF888888),
+                              ? NexusColors.textPrimary
+                              : NexusColors.textMuted,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
@@ -93,14 +93,13 @@ class FacetsBar extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  // Label
                   Text(
                     item.value,
                     style: TextStyle(
                       fontSize: 10,
                       color: isActive
-                          ? const Color(0xFFE0E0E0)
-                          : const Color(0xFF888888),
+                          ? NexusColors.textPrimary
+                          : NexusColors.textMuted,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

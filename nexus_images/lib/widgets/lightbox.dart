@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/nexus_image.dart';
+import '../theme.dart';
 
 class LightboxView extends StatelessWidget {
   final NexusImage image;
@@ -10,21 +11,18 @@ class LightboxView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateStr = image.createdAt != null
-        ? _formatDate(image.createdAt!)
-        : '';
+    final dateStr =
+        image.createdAt != null ? _formatDate(image.createdAt!) : '';
 
     return Scaffold(
       backgroundColor: Colors.black.withValues(alpha: 0.95),
       body: SafeArea(
         child: Stack(
           children: [
-            // Main content
             GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Column(
                 children: [
-                  // Image
                   Expanded(
                     child: Center(
                       child: InteractiveViewer(
@@ -33,25 +31,24 @@ class LightboxView extends StatelessWidget {
                           fit: BoxFit.contain,
                           placeholder: (_, __) => const Center(
                             child: CircularProgressIndicator(
-                              color: Color(0xFFD35400),
+                              color: NexusColors.primary,
                             ),
                           ),
                           errorWidget: (_, __, ___) => const Icon(
                             Icons.broken_image,
-                            color: Color(0xFF888888),
+                            color: NexusColors.textMuted,
                             size: 64,
                           ),
                         ),
                       ),
                     ),
                   ),
-                  // Info panel
                   GestureDetector(
-                    onTap: () {}, // Prevent closing when tapping info
+                    onTap: () {},
                     child: Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
-                      color: Colors.black.withValues(alpha: 0.8),
+                      color: NexusColors.background.withValues(alpha: 0.9),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
@@ -59,7 +56,7 @@ class LightboxView extends StatelessWidget {
                           Text(
                             image.displayTitle,
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: NexusColors.textPrimary,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -75,7 +72,7 @@ class LightboxView extends StatelessWidget {
                               '${image.rating} rating',
                             ].where((s) => s.isNotEmpty).join(' · '),
                             style: const TextStyle(
-                              color: Color(0xFFCCCCCC),
+                              color: NexusColors.warmTan,
                               fontSize: 13,
                             ),
                             textAlign: TextAlign.center,
@@ -86,7 +83,7 @@ class LightboxView extends StatelessWidget {
                             Text(
                               image.description!,
                               style: const TextStyle(
-                                color: Color(0xFFAAAAAA),
+                                color: NexusColors.textMuted,
                                 fontSize: 12,
                               ),
                               textAlign: TextAlign.center,
@@ -113,12 +110,12 @@ class LightboxView extends StatelessWidget {
                 ],
               ),
             ),
-            // Close button
             Positioned(
               top: 8,
               right: 8,
               child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                icon: const Icon(Icons.close,
+                    color: NexusColors.textPrimary, size: 28),
                 onPressed: () => Navigator.pop(context),
               ),
             ),
@@ -134,10 +131,10 @@ class LightboxView extends StatelessWidget {
       child: Text(
         label,
         style: const TextStyle(
-          color: Color(0xFFD35400),
+          color: NexusColors.primary,
           fontSize: 13,
           decoration: TextDecoration.underline,
-          decorationColor: Color(0xFFD35400),
+          decorationColor: NexusColors.primary,
         ),
       ),
     );

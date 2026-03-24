@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/nexus_image.dart';
 import '../services/nexus_api.dart';
+import '../theme.dart';
 import '../widgets/image_card.dart';
 import '../widgets/facets_bar.dart';
 import '../widgets/lightbox.dart';
@@ -16,7 +17,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentTab = 0;
 
-  // Feed state
   final ScrollController _scrollController = ScrollController();
   List<NexusGame> _games = [];
   List<NexusImage> _images = [];
@@ -165,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _sort = sort;
     _perPage = perPage;
     _activeFacets = {};
-    setState(() => _currentTab = 0); // Switch to feed tab
+    setState(() => _currentTab = 0);
     if (_scrollController.hasClients) _scrollController.jumpTo(0);
     _performSearch();
   }
@@ -173,23 +173,22 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: NexusColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF16213E),
+        backgroundColor: NexusColors.surface,
         title: const Text(
-          'Nexus Mods',
+          'Nexus Mods Images',
           style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFFD35400),
-            letterSpacing: -0.5,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: NexusColors.primary,
           ),
         ),
         actions: [
           if (_currentTab == 0)
             PopupMenuButton<SortOption>(
-              icon: const Icon(Icons.sort, color: Color(0xFFE0E0E0)),
-              color: const Color(0xFF16213E),
+              icon: const Icon(Icons.sort, color: NexusColors.textPrimary),
+              color: NexusColors.surface,
               onSelected: (sort) {
                 _sort = sort;
                 if (_scrollController.hasClients) _scrollController.jumpTo(0);
@@ -202,8 +201,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           s.label,
                           style: TextStyle(
                             color: s == _sort
-                                ? const Color(0xFFD35400)
-                                : const Color(0xFFE0E0E0),
+                                ? NexusColors.primary
+                                : NexusColors.textPrimary,
                             fontWeight: s == _sort
                                 ? FontWeight.bold
                                 : FontWeight.normal,
@@ -228,9 +227,9 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentTab,
         onTap: (i) => setState(() => _currentTab = i),
-        backgroundColor: const Color(0xFF16213E),
-        selectedItemColor: const Color(0xFFD35400),
-        unselectedItemColor: const Color(0xFF888888),
+        backgroundColor: NexusColors.surface,
+        selectedItemColor: NexusColors.primary,
+        unselectedItemColor: NexusColors.textMuted,
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
@@ -251,7 +250,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildFeed() {
     if (_loading) {
       return const Center(
-        child: CircularProgressIndicator(color: Color(0xFFD35400)),
+        child: CircularProgressIndicator(color: NexusColors.primary),
       );
     }
 
@@ -264,7 +263,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Text(
                 'Error: $_error',
-                style: const TextStyle(color: Color(0xFFE74C3C)),
+                style: const TextStyle(color: NexusColors.error),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -282,14 +281,14 @@ class _HomeScreenState extends State<HomeScreen> {
       return const Center(
         child: Text(
           'No images found.',
-          style: TextStyle(color: Color(0xFF888888), fontSize: 16),
+          style: TextStyle(color: NexusColors.textMuted, fontSize: 16),
         ),
       );
     }
 
     return RefreshIndicator(
-      color: const Color(0xFFD35400),
-      backgroundColor: const Color(0xFF16213E),
+      color: NexusColors.primary,
+      backgroundColor: NexusColors.surface,
       onRefresh: () async {
         if (_scrollController.hasClients) _scrollController.jumpTo(0);
         await _performSearch();
@@ -297,7 +296,6 @@ class _HomeScreenState extends State<HomeScreen> {
       child: CustomScrollView(
         controller: _scrollController,
         slivers: [
-          // Category stories row
           if (_facets.isNotEmpty)
             SliverToBoxAdapter(
               child: FacetsBar(
@@ -306,8 +304,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 onToggle: _toggleFacet,
               ),
             ),
-
-          // Feed posts
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) => ImageCard(
@@ -317,22 +313,18 @@ class _HomeScreenState extends State<HomeScreen> {
               childCount: _images.length,
             ),
           ),
-
-          // Loading more indicator
           if (_loadingMore)
             const SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.all(24),
                 child: Center(
                   child: CircularProgressIndicator(
-                    color: Color(0xFFD35400),
+                    color: NexusColors.primary,
                     strokeWidth: 2,
                   ),
                 ),
               ),
             ),
-
-          // End of feed
           if (_currentOffset >= _totalCount && _images.isNotEmpty)
             const SliverToBoxAdapter(
               child: Padding(
@@ -340,7 +332,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Center(
                   child: Text(
                     'You\'re all caught up',
-                    style: TextStyle(color: Color(0xFF666666), fontSize: 14),
+                    style: TextStyle(color: NexusColors.darkBrown, fontSize: 14),
                   ),
                 ),
               ),
