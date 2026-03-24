@@ -418,10 +418,12 @@
         let infiniteLoading = false;
         let infiniteObserver = null;
         let allGames = [];
-        let activeFacets = {};  // e.g. { gameId: Set("110","1704"), category: Set("Mods") }
+        let activeFacets = {};  // e.g. { category: Set("Mods", "Funny") }
+        let fetchGeneration = 0; // incremented on each new search to discard stale responses
         let lastFacets = [];    // raw facet results from last query
 
         async function loadGames() {
+            console.debug('loadGames');
             try {
                 const res = await fetch(GAMES_URL);
                 if (!res.ok) throw new Error(`Failed to load games: ${res.status}`);
@@ -434,6 +436,7 @@
         }
 
         function populateGameSelect(games) {
+            console.debug('populateGameSelect', { count: games.length });
             const select = document.getElementById('gameSelect');
             const currentValue = select.value;
             select.innerHTML = '<option value="">All Games</option>';
@@ -441,12 +444,13 @@
                 const opt = document.createElement('option');
                 opt.value = g.id;
                 opt.textContent = g.name;
-                if (g.domain_name === currentValue) opt.selected = true;
+                if (String(g.id) === currentValue) opt.selected = true;
                 select.appendChild(opt);
             }
         }
 
         function filterGameList() {
+            console.debug('filterGameList');
             const select = document.getElementById('gameSelect');
             const query = document.getElementById('gameFilter').value.toLowerCase().trim();
             if (!query) {
@@ -511,14 +515,19 @@
         `;
 
         function isInfiniteMode() {
-            return document.getElementById('modeSelect').value === 'infinite';
+            const mode = document.getElementById('modeSelect').value === 'infinite';
+            console.debug('isInfiniteMode', mode);
+            return mode;
         }
 
         function getPerPage() {
-            return parseInt(document.getElementById('countInput').value) || 20;
+            const pp = parseInt(document.getElementById('countInput').value) || 20;
+            console.debug('getPerPage', pp);
+            return pp;
         }
 
         function buildVariables(offset) {
+            console.debug('buildVariables', { offset });
             const search = document.getElementById('searchInput').value.trim();
             const game = document.getElementById('gameSelect').value;
             const sortVal = document.getElementById('sortSelect').value;
@@ -536,11 +545,7 @@
                 filter.generalSearch = [{ value: search, op: 'EQUALS' }];
             }
 
-            // Apply active facet selections as filters
-            if (activeFacets.gameId?.size && !game) {
-                filter.gameId = [...activeFacets.gameId].map(v => ({ value: v, op: 'EQUALS' }));
-            }
-            // category can't be filtered server-side, but gameId can
+            // category can't be filtered server-side, applied client-side in renderCards
 
             let sort;
             if (sortVal === 'random') {
@@ -552,16 +557,14 @@
                 sort = [{ [field]: { direction: dir } }];
             }
 
-            const facets = { gameId: [], category: [] };
+            const facets = { category: [] };
 
             return { facets, filter, sort, offset, count };
         }
 
-        async function doFetch(offset, includeFacets = false) {
+        async function doFetch(offset) {
             const variables = buildVariables(offset);
-            if (!includeFacets) {
-                delete variables.facets;
-            }
+            console.debug('doFetch', { offset, variables });
             const res = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -577,7 +580,8 @@
             }
 
             const result = json.data.media;
-            if (includeFacets && result.facets) {
+            console.debug('doFetch result', { totalCount: result.totalCount, nodes: result.nodes.length, facets: result.facets?.length });
+            if (result.facets) {
                 lastFacets = result.facets;
                 renderFacets();
             }
@@ -587,6 +591,8 @@
         // --- Paginated mode ---
 
         async function fetchImages() {
+            const generation = fetchGeneration;
+            console.debug('fetchImages', { currentOffset, generation });
             const grid = document.getElementById('grid');
             const spinner = document.getElementById('spinner');
             const errorMsg = document.getElementById('errorMsg');
@@ -601,7 +607,11 @@
             hideScrollSentinel();
 
             try {
-                const { totalCount, nodes } = await doFetch(currentOffset, true);
+                const { totalCount, nodes } = await doFetch(currentOffset);
+                if (generation !== fetchGeneration) {
+                    console.debug('fetchImages stale response discarded', { generation, current: fetchGeneration });
+                    return;
+                }
                 totalResults = totalCount;
 
                 totalText.textContent = `${totalCount.toLocaleString()} total images`;
@@ -610,24 +620,31 @@
                 renderCards(nodes, false);
                 renderPagination(totalCount, getPerPage());
             } catch (err) {
+                if (generation !== fetchGeneration) return;
                 errorMsg.textContent = `Error: ${err.message}`;
                 statusText.textContent = '';
                 totalText.textContent = '';
             } finally {
-                spinner.classList.remove('active');
-                document.getElementById('searchBtn').disabled = false;
+                if (generation === fetchGeneration) {
+                    spinner.classList.remove('active');
+                    document.getElementById('searchBtn').disabled = false;
+                }
             }
         }
 
         // --- Infinite scroll mode ---
 
         async function fetchInfiniteInitial() {
+            const generation = fetchGeneration;
+            console.debug('fetchInfiniteInitial', { generation });
             const grid = document.getElementById('grid');
             const spinner = document.getElementById('spinner');
             const errorMsg = document.getElementById('errorMsg');
             const statusText = document.getElementById('statusText');
             const totalText = document.getElementById('totalText');
 
+            teardownInfiniteScroll();
+            infiniteLoading = true;
             grid.innerHTML = '';
             errorMsg.textContent = '';
             currentOffset = 0;
@@ -637,7 +654,11 @@
             document.getElementById('pagination').innerHTML = '';
 
             try {
-                const { totalCount, nodes } = await doFetch(0, true);
+                const { totalCount, nodes } = await doFetch(0);
+                if (generation !== fetchGeneration) {
+                    console.debug('fetchInfiniteInitial stale response discarded', { generation, current: fetchGeneration });
+                    return;
+                }
                 totalResults = totalCount;
                 currentOffset = nodes.length;
 
@@ -645,27 +666,38 @@
                 updateInfiniteStatus();
 
                 renderCards(nodes, false);
+                infiniteLoading = false;
                 setupInfiniteScroll();
             } catch (err) {
+                if (generation !== fetchGeneration) return;
                 errorMsg.textContent = `Error: ${err.message}`;
                 statusText.textContent = '';
                 totalText.textContent = '';
                 hideScrollSentinel();
             } finally {
-                spinner.classList.remove('active');
-                document.getElementById('searchBtn').disabled = false;
+                if (generation === fetchGeneration) {
+                    infiniteLoading = false;
+                    spinner.classList.remove('active');
+                    document.getElementById('searchBtn').disabled = false;
+                }
             }
         }
 
         async function fetchNextPage() {
+            console.debug('fetchNextPage', { infiniteLoading, currentOffset, totalResults, fetchGeneration });
             if (infiniteLoading || currentOffset >= totalResults) return;
             infiniteLoading = true;
+            const generation = fetchGeneration;
 
             const infiniteSpinner = document.getElementById('infiniteSpinner');
             infiniteSpinner.classList.add('active');
 
             try {
                 const { totalCount, nodes } = await doFetch(currentOffset);
+                if (generation !== fetchGeneration) {
+                    console.debug('fetchNextPage stale response discarded', { generation, current: fetchGeneration });
+                    return;
+                }
                 totalResults = totalCount;
                 currentOffset += nodes.length;
 
@@ -679,14 +711,18 @@
                     document.getElementById('infiniteStatus').textContent = 'All images loaded.';
                 }
             } catch (err) {
+                if (generation !== fetchGeneration) return;
                 document.getElementById('infiniteStatus').textContent = `Error loading more: ${err.message}`;
             } finally {
-                infiniteSpinner.classList.remove('active');
-                infiniteLoading = false;
+                if (generation === fetchGeneration) {
+                    infiniteSpinner.classList.remove('active');
+                    infiniteLoading = false;
+                }
             }
         }
 
         function updateInfiniteStatus() {
+            console.debug('updateInfiniteStatus', { currentOffset, totalResults });
             const loaded = Math.min(currentOffset, totalResults);
             document.getElementById('statusText').textContent = `Loaded ${loaded.toLocaleString()} of ${totalResults.toLocaleString()}`;
             document.getElementById('infiniteStatus').textContent =
@@ -694,6 +730,7 @@
         }
 
         function setupInfiniteScroll() {
+            console.debug('setupInfiniteScroll', { currentOffset, totalResults });
             teardownInfiniteScroll();
 
             const sentinel = document.getElementById('scrollSentinel');
@@ -714,6 +751,7 @@
         }
 
         function teardownInfiniteScroll() {
+            console.debug('teardownInfiniteScroll', { hadObserver: !!infiniteObserver });
             if (infiniteObserver) {
                 infiniteObserver.disconnect();
                 infiniteObserver = null;
@@ -721,6 +759,7 @@
         }
 
         function hideScrollSentinel() {
+            console.debug('hideScrollSentinel');
             document.getElementById('scrollSentinel').classList.remove('active');
             document.getElementById('infiniteSpinner').classList.remove('active');
             document.getElementById('infiniteStatus').textContent = '';
@@ -730,6 +769,7 @@
         // --- Shared rendering ---
 
         function renderCards(nodes, append) {
+            console.debug('renderCards', { nodes: nodes.length, append, activeCategoryFacets: activeFacets.category?.size || 0 });
             const grid = document.getElementById('grid');
             if (!append) grid.innerHTML = '';
 
@@ -770,6 +810,7 @@
         }
 
         function renderPagination(total, perPage) {
+            console.debug('renderPagination', { total, perPage });
             const container = document.getElementById('pagination');
             container.innerHTML = '';
 
@@ -815,6 +856,7 @@
         // --- Facets ---
 
         function renderFacets() {
+            console.debug('renderFacets', { facetCount: lastFacets.length, activeFacets });
             const bar = document.getElementById('facetsBar');
             bar.innerHTML = '';
 
@@ -827,12 +869,10 @@
             }
 
             const facetLabels = {
-                gameId: 'Game',
                 category: 'Category'
             };
 
-            // Only show gameId and category (type is always "image")
-            for (const facetName of ['gameId', 'category']) {
+            for (const facetName of ['category']) {
                 const items = groups[facetName];
                 if (!items || items.length === 0) continue;
                 items.sort((a, b) => b.count - a.count);
@@ -856,11 +896,7 @@
                         btn.classList.add('active');
                     }
 
-                    const displayName = facetName === 'gameId'
-                        ? gameIdToName(item.value)
-                        : item.value;
-
-                    btn.innerHTML = `${escapeHtml(displayName)}<span class="facet-count">${item.count.toLocaleString()}</span>`;
+                    btn.innerHTML = `${escapeHtml(item.value)}<span class="facet-count">${item.count.toLocaleString()}</span>`;
 
                     btn.addEventListener('click', () => toggleFacet(facetName, item.value));
                     buttons.appendChild(btn);
@@ -871,12 +907,9 @@
             }
         }
 
-        function gameIdToName(id) {
-            const game = allGames.find(g => String(g.id) === String(id));
-            return game ? game.name : id;
-        }
 
         function toggleFacet(facetName, value) {
+            console.debug('toggleFacet', { facetName, value });
             if (!activeFacets[facetName]) {
                 activeFacets[facetName] = new Set();
             }
@@ -888,6 +921,7 @@
             } else {
                 activeFacets[facetName].add(value);
             }
+            ++fetchGeneration;
             currentOffset = 0;
             hideScrollSentinel();
             if (isInfiniteMode()) {
@@ -900,6 +934,8 @@
         // --- Dispatch based on mode ---
 
         function performSearch() {
+            ++fetchGeneration;
+            console.debug('performSearch', { fetchGeneration });
             currentOffset = 0;
             activeFacets = {};
             hideScrollSentinel();
@@ -913,6 +949,7 @@
         // --- Lightbox ---
 
         function openLightbox(img) {
+            console.debug('openLightbox', { id: img.id, name: img.name });
             const lightbox = document.getElementById('lightbox');
             const lightboxImg = document.getElementById('lightboxImg');
             const lightboxInfo = document.getElementById('lightboxInfo');
@@ -938,15 +975,16 @@
         }
 
         function closeLightbox() {
+            console.debug('closeLightbox');
             document.getElementById('lightbox').classList.remove('active');
             document.getElementById('lightboxImg').src = '';
         }
 
+        const _escapeEl = document.createElement('div');
         function escapeHtml(str) {
             if (!str) return '';
-            const div = document.createElement('div');
-            div.textContent = str;
-            return div.innerHTML;
+            _escapeEl.textContent = str;
+            return _escapeEl.innerHTML;
         }
 
         // --- Event listeners ---
