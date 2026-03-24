@@ -4,7 +4,7 @@ import '../services/nexus_api.dart';
 import '../widgets/image_card.dart';
 import '../widgets/facets_bar.dart';
 import '../widgets/lightbox.dart';
-import '../widgets/search_controls.dart';
+import 'search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,8 +14,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final ScrollController _scrollController = ScrollController();
+  int _currentTab = 0;
 
+  // Feed state
+  final ScrollController _scrollController = ScrollController();
   List<NexusGame> _games = [];
   List<NexusImage> _images = [];
   List<FacetItem> _facets = [];
@@ -28,7 +30,6 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _error;
   int _fetchGeneration = 0;
 
-  // Current search params
   String? _searchText;
   int? _gameId;
   SortOption _sort = SortOption.newest;
@@ -61,7 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_loadingMore || _currentOffset >= _totalCount) return;
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.position.pixels;
-    if (currentScroll >= maxScroll - 400) {
+    if (currentScroll >= maxScroll - 600) {
       _loadNextPage();
     }
   }
@@ -85,9 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
         count: _perPage,
         activeFacets: _activeFacets,
       );
-
       if (generation != _fetchGeneration || !mounted) return;
-
       setState(() {
         _images = result.nodes;
         _totalCount = result.totalCount;
@@ -106,7 +105,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadNextPage() async {
     if (_loadingMore || _currentOffset >= _totalCount) return;
-
     final generation = _fetchGeneration;
     setState(() => _loadingMore = true);
 
@@ -119,9 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
         count: _perPage,
         activeFacets: _activeFacets,
       );
-
       if (generation != _fetchGeneration || !mounted) return;
-
       setState(() {
         _images.addAll(result.nodes);
         _totalCount = result.totalCount;
@@ -133,21 +129,6 @@ class _HomeScreenState extends State<HomeScreen> {
       if (generation != _fetchGeneration || !mounted) return;
       setState(() => _loadingMore = false);
     }
-  }
-
-  void _onSearch({
-    String? searchText,
-    int? gameId,
-    SortOption sort = SortOption.newest,
-    int perPage = 20,
-  }) {
-    _searchText = searchText;
-    _gameId = gameId;
-    _sort = sort;
-    _perPage = perPage;
-    _activeFacets = {};
-    _scrollController.jumpTo(0);
-    _performSearch();
   }
 
   void _toggleFacet(String facetName, String value) {
@@ -162,78 +143,112 @@ class _HomeScreenState extends State<HomeScreen> {
         _activeFacets[facetName]!.add(value);
       }
     });
-    _scrollController.jumpTo(0);
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
     _performSearch();
   }
 
   void _openLightbox(NexusImage image) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => LightboxView(image: image),
-      ),
+      MaterialPageRoute(builder: (_) => LightboxView(image: image)),
     );
+  }
+
+  void _onSearchSubmitted({
+    String? searchText,
+    int? gameId,
+    SortOption sort = SortOption.newest,
+    int perPage = 20,
+  }) {
+    _searchText = searchText;
+    _gameId = gameId;
+    _sort = sort;
+    _perPage = perPage;
+    _activeFacets = {};
+    setState(() => _currentTab = 0); // Switch to feed tab
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
+    _performSearch();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF1A1A2E),
       appBar: AppBar(
+        backgroundColor: const Color(0xFF16213E),
         title: const Text(
-          'Nexus Mods Image Browser',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          'Nexus Mods',
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFFD35400),
+            letterSpacing: -0.5,
+          ),
         ),
+        actions: [
+          if (_currentTab == 0)
+            PopupMenuButton<SortOption>(
+              icon: const Icon(Icons.sort, color: Color(0xFFE0E0E0)),
+              color: const Color(0xFF16213E),
+              onSelected: (sort) {
+                _sort = sort;
+                if (_scrollController.hasClients) _scrollController.jumpTo(0);
+                _performSearch();
+              },
+              itemBuilder: (_) => SortOption.values
+                  .map((s) => PopupMenuItem(
+                        value: s,
+                        child: Text(
+                          s.label,
+                          style: TextStyle(
+                            color: s == _sort
+                                ? const Color(0xFFD35400)
+                                : const Color(0xFFE0E0E0),
+                            fontWeight: s == _sort
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ))
+                  .toList(),
+            ),
+        ],
+        elevation: 0,
       ),
-      body: Column(
+      body: IndexedStack(
+        index: _currentTab,
         children: [
-          // Search controls
-          SearchControls(
+          _buildFeed(),
+          SearchScreen(
             games: _games,
-            onSearch: _onSearch,
+            onSearch: _onSearchSubmitted,
           ),
-
-          // Facets bar
-          if (_facets.isNotEmpty)
-            FacetsBar(
-              facets: _facets,
-              activeFacets: _activeFacets,
-              onToggle: _toggleFacet,
-            ),
-
-          // Status bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _images.isEmpty
-                      ? ''
-                      : 'Loaded ${_images.length} of ${_totalCount}',
-                  style: const TextStyle(
-                      color: Color(0xFF888888), fontSize: 12),
-                ),
-                Text(
-                  _totalCount > 0
-                      ? '${_totalCount} total images'
-                      : '',
-                  style: const TextStyle(
-                      color: Color(0xFF888888), fontSize: 12),
-                ),
-              ],
-            ),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentTab,
+        onTap: (i) => setState(() => _currentTab = i),
+        backgroundColor: const Color(0xFF16213E),
+        selectedItemColor: const Color(0xFFD35400),
+        unselectedItemColor: const Color(0xFF888888),
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Feed',
           ),
-
-          // Main content
-          Expanded(
-            child: _buildContent(),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            activeIcon: Icon(Icons.search),
+            label: 'Search',
           ),
         ],
       ),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildFeed() {
     if (_loading) {
       return const Center(
         child: CircularProgressIndicator(color: Color(0xFFD35400)),
@@ -272,21 +287,28 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    final isWide = MediaQuery.of(context).size.width > 600;
-    final crossAxisCount = isWide ? 3 : 2;
-
-    return CustomScrollView(
-      controller: _scrollController,
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.all(8),
-          sliver: SliverGrid(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: 0.75,
+    return RefreshIndicator(
+      color: const Color(0xFFD35400),
+      backgroundColor: const Color(0xFF16213E),
+      onRefresh: () async {
+        if (_scrollController.hasClients) _scrollController.jumpTo(0);
+        await _performSearch();
+      },
+      child: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          // Category stories row
+          if (_facets.isNotEmpty)
+            SliverToBoxAdapter(
+              child: FacetsBar(
+                facets: _facets,
+                activeFacets: _activeFacets,
+                onToggle: _toggleFacet,
+              ),
             ),
+
+          // Feed posts
+          SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) => ImageCard(
                 image: _images[index],
@@ -295,32 +317,36 @@ class _HomeScreenState extends State<HomeScreen> {
               childCount: _images.length,
             ),
           ),
-        ),
-        if (_loadingMore)
-          const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFFD35400),
-                  strokeWidth: 2,
+
+          // Loading more indicator
+          if (_loadingMore)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xFFD35400),
+                    strokeWidth: 2,
+                  ),
                 ),
               ),
             ),
-          ),
-        if (_currentOffset >= _totalCount && _images.isNotEmpty)
-          const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(
-                child: Text(
-                  'All images loaded.',
-                  style: TextStyle(color: Color(0xFF888888), fontSize: 13),
+
+          // End of feed
+          if (_currentOffset >= _totalCount && _images.isNotEmpty)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(
+                  child: Text(
+                    'You\'re all caught up',
+                    style: TextStyle(color: Color(0xFF666666), fontSize: 14),
+                  ),
                 ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }

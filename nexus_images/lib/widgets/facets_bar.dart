@@ -15,7 +15,6 @@ class FacetsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Group facets by type, filter zero counts
     final groups = <String, List<FacetItem>>{};
     for (final f in facets) {
       if (f.count == 0) continue;
@@ -31,73 +30,87 @@ class FacetsBar extends StatelessWidget {
     final top = categoryItems.take(10).toList();
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      height: 100,
+      padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: const BoxDecoration(
+        color: Color(0xFF16213E),
         border: Border(
-          bottom: BorderSide(color: Color(0xFF2A2A4A)),
+          bottom: BorderSide(color: Color(0xFF2A2A4A), width: 0.5),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'CATEGORY',
-            style: TextStyle(
-              fontSize: 10,
-              color: Color(0xFF666666),
-              letterSpacing: 0.5,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: top.map((item) {
-              final isActive =
-                  activeFacets['category']?.contains(item.value) ?? false;
-              return GestureDetector(
-                onTap: () => onToggle('category', item.value),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? const Color(0xFFD35400)
-                        : const Color(0xFF1A1A2E),
-                    border: Border.all(
-                      color: isActive
-                          ? const Color(0xFFD35400)
-                          : const Color(0xFF2A2A4A),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: top.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 16),
+        itemBuilder: (_, i) {
+          final item = top[i];
+          final isActive =
+              activeFacets['category']?.contains(item.value) ?? false;
+          return GestureDetector(
+            onTap: () => onToggle('category', item.value),
+            child: SizedBox(
+              width: 68,
+              child: Column(
+                children: [
+                  // Circle icon (stories-style)
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: isActive
+                          ? const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Color(0xFFD35400),
+                                Color(0xFFE67E22),
+                              ],
+                            )
+                          : null,
+                      color: isActive ? null : const Color(0xFF1A1A2E),
+                      border: Border.all(
+                        color: isActive
+                            ? Colors.transparent
+                            : const Color(0xFF2A2A4A),
+                        width: 2,
+                      ),
                     ),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        item.value,
+                    child: Center(
+                      child: Text(
+                        item.value.isNotEmpty
+                            ? item.value[0].toUpperCase()
+                            : '?',
                         style: TextStyle(
-                          fontSize: 12,
-                          color: isActive ? Colors.white : const Color(0xFFCCCCCC),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        item.count.toString(),
-                        style: TextStyle(
-                          fontSize: 10,
                           color: isActive
-                              ? Colors.white70
+                              ? Colors.white
                               : const Color(0xFF888888),
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
+                  const SizedBox(height: 4),
+                  // Label
+                  Text(
+                    item.value,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: isActive
+                          ? const Color(0xFFE0E0E0)
+                          : const Color(0xFF888888),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
