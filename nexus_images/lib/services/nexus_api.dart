@@ -118,7 +118,10 @@ class NexusApi {
 
     final res = await http.post(
       Uri.parse(_apiUrl),
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Application-Name': 'Flutter_NM_Image_Browser',
+      },
       body: json.encode({'query': _query, 'variables': variables}),
     );
 
