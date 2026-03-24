@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:graphql.nexusmods.com)",
+      "Bash(curl -s -X POST https://api.nexusmods.com/v2/graphql -H \"Content-Type: application/json\" -d '{\"\"\"\"query\"\"\"\":\"\"\"\"{ __type\\(name: \\\\\"\"\"\"Image\\\\\"\"\"\"\\) { name fields { name type { name kind ofType { name kind ofType { name kind } } } args { name type { name kind ofType { name } } } } } }\"\"\"\"}')",
+      "Bash(curl:*)",
+      "Bash(python3 -m json.tool)",
+      "WebFetch(domain:data.nexusmods.com)",
+      "WebFetch(domain:www.nexusmods.com)"
+    ]
+  }
+}

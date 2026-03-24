@@ -165,6 +165,71 @@
             gap: 0.75rem;
         }
 
+        .facets-bar {
+            padding: 0;
+        }
+
+        .facets-bar:empty {
+            display: none;
+        }
+
+        .facet-group {
+            padding: 0.5rem 2rem;
+            border-bottom: 1px solid #2a2a4a;
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .facet-group-label {
+            font-size: 0.7rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            flex-shrink: 0;
+            min-width: 70px;
+        }
+
+        .facet-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+        }
+
+        .facet-btn {
+            background: #1a1a2e;
+            border: 1px solid #2a2a4a;
+            color: #ccc;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .facet-btn:hover {
+            border-color: #d35400;
+            color: #fff;
+        }
+
+        .facet-btn.active {
+            background: #d35400;
+            border-color: #d35400;
+            color: #fff;
+        }
+
+        .facet-btn .facet-count {
+            color: #888;
+            font-size: 0.65rem;
+            margin-left: 0.25rem;
+        }
+
+        .facet-btn.active .facet-count {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
         .card-link {
             display: block;
             margin-top: 0.4rem;
@@ -321,6 +386,8 @@
         </div>
     </div>
 
+    <div id="facetsBar" class="facets-bar"></div>
+
     <div class="status-bar">
         <span id="statusText"></span>
         <span id="totalText"></span>
@@ -351,6 +418,8 @@
         let infiniteLoading = false;
         let infiniteObserver = null;
         let allGames = [];
+        let activeFacets = {};  // e.g. { gameId: "110", category: "Mods" }
+        let lastFacets = [];    // raw facet results from last query
 
         async function loadGames() {
             try {
@@ -398,18 +467,21 @@
 
         const QUERY = `
             query MediaSearch(
+                $facets: MediaFacet,
                 $filter: MediaSearchFilter,
                 $sort: [MediaSearchSort!],
                 $offset: Int,
                 $count: Int
             ) {
                 media(
+                    facets: $facets,
                     filter: $filter,
                     sort: $sort,
                     offset: $offset,
                     count: $count
                 ) {
                     totalCount
+                    facets { facet value count }
                     nodes {
                         ... on Image {
                             id
@@ -422,6 +494,7 @@
                             rating
                             createdAt
                             siteUrl
+                            category { name }
                             game {
                                 name
                                 domainName
@@ -463,6 +536,12 @@
                 filter.generalSearch = [{ value: search, op: 'EQUALS' }];
             }
 
+            // Apply active facet selections as filters
+            if (activeFacets.gameId && !game) {
+                filter.gameId = [{ value: activeFacets.gameId, op: 'EQUALS' }];
+            }
+            // category can't be filtered server-side, but gameId can
+
             let sort;
             if (sortVal === 'random') {
                 sort = [{ random: { seed: Math.floor(Math.random() * 100000) } }];
@@ -473,11 +552,16 @@
                 sort = [{ [field]: { direction: dir } }];
             }
 
-            return { filter, sort, offset, count };
+            const facets = { gameId: [], category: [] };
+
+            return { facets, filter, sort, offset, count };
         }
 
-        async function doFetch(offset) {
+        async function doFetch(offset, includeFacets = false) {
             const variables = buildVariables(offset);
+            if (!includeFacets) {
+                delete variables.facets;
+            }
             const res = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -492,7 +576,12 @@
                 throw new Error(json.errors.map(e => e.message).join('; '));
             }
 
-            return json.data.media;
+            const result = json.data.media;
+            if (includeFacets && result.facets) {
+                lastFacets = result.facets;
+                renderFacets();
+            }
+            return result;
         }
 
         // --- Paginated mode ---
@@ -512,7 +601,7 @@
             hideScrollSentinel();
 
             try {
-                const { totalCount, nodes } = await doFetch(currentOffset);
+                const { totalCount, nodes } = await doFetch(currentOffset, true);
                 totalResults = totalCount;
 
                 totalText.textContent = `${totalCount.toLocaleString()} total images`;
@@ -548,7 +637,7 @@
             document.getElementById('pagination').innerHTML = '';
 
             try {
-                const { totalCount, nodes } = await doFetch(0);
+                const { totalCount, nodes } = await doFetch(0, true);
                 totalResults = totalCount;
                 currentOffset = nodes.length;
 
@@ -644,12 +733,18 @@
             const grid = document.getElementById('grid');
             if (!append) grid.innerHTML = '';
 
-            if (nodes.length === 0 && !append) {
+            // Client-side category filter (not available as a server filter)
+            let filtered = nodes;
+            if (activeFacets.category) {
+                filtered = nodes.filter(img => img.category?.name === activeFacets.category);
+            }
+
+            if (filtered.length === 0 && !append) {
                 grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#888;padding:2rem;">No images found.</p>';
                 return;
             }
 
-            for (const img of nodes) {
+            for (const img of filtered) {
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.innerHTML = `
@@ -717,10 +812,88 @@
             addBtn('Next', currentOffset + perPage, currentPage >= totalPages - 1);
         }
 
+        // --- Facets ---
+
+        function renderFacets() {
+            const bar = document.getElementById('facetsBar');
+            bar.innerHTML = '';
+
+            // Group facets by type
+            const groups = {};
+            for (const f of lastFacets) {
+                if (f.count === 0) continue;
+                if (!groups[f.facet]) groups[f.facet] = [];
+                groups[f.facet].push(f);
+            }
+
+            const facetLabels = {
+                gameId: 'Game',
+                category: 'Category'
+            };
+
+            // Only show gameId and category (type is always "image")
+            for (const facetName of ['gameId', 'category']) {
+                const items = groups[facetName];
+                if (!items || items.length === 0) continue;
+
+                const group = document.createElement('div');
+                group.className = 'facet-group';
+
+                const label = document.createElement('span');
+                label.className = 'facet-group-label';
+                label.textContent = facetLabels[facetName] || facetName;
+                group.appendChild(label);
+
+                const buttons = document.createElement('div');
+                buttons.className = 'facet-buttons';
+
+                for (const item of items) {
+                    const btn = document.createElement('button');
+                    btn.className = 'facet-btn';
+                    if (activeFacets[facetName] === item.value) {
+                        btn.classList.add('active');
+                    }
+
+                    const displayName = facetName === 'gameId'
+                        ? gameIdToName(item.value)
+                        : item.value;
+
+                    btn.innerHTML = `${escapeHtml(displayName)}<span class="facet-count">${item.count.toLocaleString()}</span>`;
+
+                    btn.addEventListener('click', () => toggleFacet(facetName, item.value));
+                    buttons.appendChild(btn);
+                }
+
+                group.appendChild(buttons);
+                bar.appendChild(group);
+            }
+        }
+
+        function gameIdToName(id) {
+            const game = allGames.find(g => String(g.id) === String(id));
+            return game ? game.name : id;
+        }
+
+        function toggleFacet(facetName, value) {
+            if (activeFacets[facetName] === value) {
+                delete activeFacets[facetName];
+            } else {
+                activeFacets[facetName] = value;
+            }
+            currentOffset = 0;
+            hideScrollSentinel();
+            if (isInfiniteMode()) {
+                fetchInfiniteInitial();
+            } else {
+                fetchImages();
+            }
+        }
+
         // --- Dispatch based on mode ---
 
         function performSearch() {
             currentOffset = 0;
+            activeFacets = {};
             hideScrollSentinel();
             if (isInfiniteMode()) {
                 fetchInfiniteInitial();
