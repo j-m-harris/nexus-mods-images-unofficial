@@ -358,7 +358,7 @@
             select.innerHTML = '<option value="">All Games</option>';
             for (const g of games) {
                 const opt = document.createElement('option');
-                opt.value = g.domain_name;
+                opt.value = g.id;
                 opt.textContent = g.name;
                 if (g.domain_name === currentValue) opt.selected = true;
                 select.appendChild(opt);
@@ -437,7 +437,7 @@
             };
 
             if (game) {
-                filter.gameName = [{ value: game, op: 'EQUALS' }];
+                filter.gameId = [{ value: game, op: 'EQUALS' }];
             }
 
             if (search) {
