@@ -24,8 +24,11 @@ class LightboxView extends StatelessWidget {
               child: Column(
                 children: [
                   Expanded(
-                    child: Center(
-                      child: InteractiveViewer(
+                    child: InteractiveViewer(
+                      clipBehavior: Clip.none,
+                      minScale: 1.0,
+                      maxScale: 5.0,
+                      child: SizedBox.expand(
                         child: CachedNetworkImage(
                           imageUrl: image.url,
                           fit: BoxFit.contain,
@@ -91,18 +94,11 @@ class LightboxView extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
-                          const SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _linkButton('Full Image', image.url),
-                              if (image.siteUrl != null) ...[
-                                const SizedBox(width: 16),
-                                _linkButton(
-                                    'View on Nexus Mods', image.siteUrl!),
-                              ],
-                            ],
-                          ),
+                          if (image.siteUrl != null) ...[
+                            const SizedBox(height: 10),
+                            _linkButton(
+                                'View on Nexus Mods', image.siteUrl!),
+                          ],
                         ],
                       ),
                     ),
