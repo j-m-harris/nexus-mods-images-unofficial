@@ -59,7 +59,7 @@ class NexusApi {
     }
     final List<dynamic> data = json.decode(res.body);
     final games = data.map((g) => NexusGame.fromJson(g)).toList();
-    games.sort((a, b) => a.name.compareTo(b.name));
+    games.sort((a, b) => b.downloads.compareTo(a.downloads));
     return games;
   }
 

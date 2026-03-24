@@ -63,11 +63,13 @@ class NexusGame {
   final int id;
   final String name;
   final String domainName;
+  final int downloads;
 
   NexusGame({
     required this.id,
     required this.name,
     required this.domainName,
+    required this.downloads,
   });
 
   factory NexusGame.fromJson(Map<String, dynamic> json) {
@@ -75,6 +77,7 @@ class NexusGame {
       id: json['id'],
       name: json['name'] ?? '',
       domainName: json['domain_name'] ?? '',
+      downloads: json['downloads'] ?? 0,
     );
   }
 }
