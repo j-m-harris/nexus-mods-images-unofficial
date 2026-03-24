@@ -418,7 +418,7 @@
         let infiniteLoading = false;
         let infiniteObserver = null;
         let allGames = [];
-        let activeFacets = {};  // e.g. { gameId: "110", category: "Mods" }
+        let activeFacets = {};  // e.g. { gameId: Set("110","1704"), category: Set("Mods") }
         let lastFacets = [];    // raw facet results from last query
 
         async function loadGames() {
@@ -537,8 +537,8 @@
             }
 
             // Apply active facet selections as filters
-            if (activeFacets.gameId && !game) {
-                filter.gameId = [{ value: activeFacets.gameId, op: 'EQUALS' }];
+            if (activeFacets.gameId?.size && !game) {
+                filter.gameId = [...activeFacets.gameId].map(v => ({ value: v, op: 'EQUALS' }));
             }
             // category can't be filtered server-side, but gameId can
 
@@ -735,8 +735,8 @@
 
             // Client-side category filter (not available as a server filter)
             let filtered = nodes;
-            if (activeFacets.category) {
-                filtered = nodes.filter(img => img.category?.name === activeFacets.category);
+            if (activeFacets.category?.size) {
+                filtered = nodes.filter(img => activeFacets.category.has(img.category?.name));
             }
 
             if (filtered.length === 0 && !append) {
@@ -835,6 +835,8 @@
             for (const facetName of ['gameId', 'category']) {
                 const items = groups[facetName];
                 if (!items || items.length === 0) continue;
+                items.sort((a, b) => b.count - a.count);
+                const top = items.slice(0, 10);
 
                 const group = document.createElement('div');
                 group.className = 'facet-group';
@@ -847,10 +849,10 @@
                 const buttons = document.createElement('div');
                 buttons.className = 'facet-buttons';
 
-                for (const item of items) {
+                for (const item of top) {
                     const btn = document.createElement('button');
                     btn.className = 'facet-btn';
-                    if (activeFacets[facetName] === item.value) {
+                    if (activeFacets[facetName]?.has(item.value)) {
                         btn.classList.add('active');
                     }
 
@@ -875,10 +877,16 @@
         }
 
         function toggleFacet(facetName, value) {
-            if (activeFacets[facetName] === value) {
-                delete activeFacets[facetName];
+            if (!activeFacets[facetName]) {
+                activeFacets[facetName] = new Set();
+            }
+            if (activeFacets[facetName].has(value)) {
+                activeFacets[facetName].delete(value);
+                if (activeFacets[facetName].size === 0) {
+                    delete activeFacets[facetName];
+                }
             } else {
-                activeFacets[facetName] = value;
+                activeFacets[facetName].add(value);
             }
             currentOffset = 0;
             hideScrollSentinel();
