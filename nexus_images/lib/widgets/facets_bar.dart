@@ -33,7 +33,13 @@ class FacetsBar extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    categoryItems.sort((a, b) => b.count.compareTo(a.count));
+    final activeSet = activeFacets['category'] ?? {};
+    categoryItems.sort((a, b) {
+      final aActive = activeSet.contains(a.value) ? 0 : 1;
+      final bActive = activeSet.contains(b.value) ? 0 : 1;
+      if (aActive != bActive) return aActive.compareTo(bActive);
+      return b.count.compareTo(a.count);
+    });
 
     return Container(
       height: 100,
