@@ -265,47 +265,6 @@ class _SearchScreenState extends State<SearchScreen> {
               );
             }).toList(),
           ),
-          const SizedBox(height: 20),
-
-          // Per page
-          const Text('RESULTS PER PAGE',
-              style: TextStyle(
-                  fontSize: 11,
-                  color: NexusColors.textMuted,
-                  letterSpacing: 1)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              SizedBox(
-                width: 80,
-                child: TextField(
-                  controller: TextEditingController(text: '$_perPage'),
-                  keyboardType: TextInputType.number,
-                  style: const TextStyle(
-                      color: NexusColors.textPrimary, fontSize: 14),
-                  textAlign: TextAlign.center,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: NexusColors.surface,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                  onChanged: (val) {
-                    final n = int.tryParse(val);
-                    if (n != null && n >= 1 && n <= 50) {
-                      _perPage = n;
-                    }
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              const Text('(1-50)',
-                  style:
-                      TextStyle(color: NexusColors.darkBrown, fontSize: 12)),
-            ],
-          ),
           const SizedBox(height: 32),
 
           // Search button
