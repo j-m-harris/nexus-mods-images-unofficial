@@ -169,6 +169,35 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _goHome() {
+    if (_hasActiveSearch) {
+      _searchText = null;
+      _gameId = null;
+      _sort = SortOption.newest;
+      _activeFacets = {};
+    }
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
+    _performSearch();
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Feed refreshed',
+            style: TextStyle(color: NexusColors.textPrimary),
+          ),
+          duration: const Duration(seconds: 2),
+          backgroundColor: NexusColors.darkBrown,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(bottom: 8, left: 16, right: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      );
+    setState(() => _currentTab = 0);
+  }
+
   void _onSearchSubmitted({
     String? searchText,
     int? gameId,
@@ -193,10 +222,13 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: NexusColors.surface,
         title: Row(
           children: [
-            Image.asset(
-              'assets/icon.png',
-              width: 28,
-              height: 28,
+            GestureDetector(
+              onTap: _goHome,
+              child: Image.asset(
+                'assets/icon.png',
+                width: 28,
+                height: 28,
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -270,34 +302,10 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _currentTab,
         onTap: (i) {
           if (i == 0) {
-            if (_hasActiveSearch) {
-              _searchText = null;
-              _gameId = null;
-              _sort = SortOption.newest;
-              _activeFacets = {};
-            }
-            if (_scrollController.hasClients) _scrollController.jumpTo(0);
-            _performSearch();
-            ScaffoldMessenger.of(context)
-              ..clearSnackBars()
-              ..showSnackBar(
-                SnackBar(
-                  content: const Text(
-                    'Feed refreshed',
-                    style: TextStyle(color: NexusColors.textPrimary),
-                  ),
-                  duration: const Duration(seconds: 2),
-                  backgroundColor: NexusColors.darkBrown,
-                  behavior: SnackBarBehavior.floating,
-                  margin: const EdgeInsets.only(
-                      bottom: 8, left: 16, right: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              );
+            _goHome();
+          } else {
+            setState(() => _currentTab = i);
           }
-          setState(() => _currentTab = i);
         },
         backgroundColor: NexusColors.surface,
         selectedItemColor: NexusColors.primary,
