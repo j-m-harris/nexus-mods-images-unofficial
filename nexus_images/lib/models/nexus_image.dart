@@ -81,10 +81,18 @@ class NexusImage {
         .replaceAll('&quot;', '"')
         .replaceAll('&#39;', "'")
         .replaceAll('&apos;', "'");
+    final debbcoded = decoded
+        .replaceAll(
+            RegExp(r'\[img\b[^\]]*\][\s\S]*?\[/img\]', caseSensitive: false),
+            '')
+        .replaceAllMapped(
+            RegExp(r'\[url\b[^\]]*\]([\s\S]*?)\[/url\]', caseSensitive: false),
+            (m) => m.group(1) ?? '')
+        .replaceAll(RegExp(r'\[/?[a-zA-Z][a-zA-Z0-9]*(=[^\]]*)?\]'), '');
     if (inline) {
-      return decoded.replaceAll(RegExp(r'\s+'), ' ').trim();
+      return debbcoded.replaceAll(RegExp(r'\s+'), ' ').trim();
     }
-    return decoded.replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
+    return debbcoded.replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
   }
 }
 
