@@ -118,19 +118,55 @@ class _LightboxViewState extends State<LightboxView>
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        image.displayTitle,
-                        style: const TextStyle(
-                          color: NexusColors.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 10,
+                        runSpacing: 6,
+                        children: [
+                          Text(
+                            image.displayTitle,
+                            style: const TextStyle(
+                              color: NexusColors.textPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          if (image.gameName != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                border:
+                                    Border.all(color: NexusColors.border),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.sports_esports,
+                                    size: 14,
+                                    color: NexusColors.warmTan,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    image.gameName!,
+                                    style: const TextStyle(
+                                      color: NexusColors.warmTan,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 6),
                       Text(
                         [
-                          image.gameName ?? '',
                           'by ${image.ownerName ?? 'Unknown'}',
                           dateStr,
                           '${_formatNumber(image.views)} views',
