@@ -389,6 +389,7 @@ class _HomeScreenState extends State<HomeScreen> {
               (context, index) => ImageCard(
                 image: _images[index],
                 onTap: () => _openLightbox(_images[index]),
+                onCategoryTap: (value) => _toggleFacet('category', value),
               ),
               childCount: _images.length,
             ),

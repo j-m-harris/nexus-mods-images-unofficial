@@ -8,8 +8,14 @@ import '../theme.dart';
 class ImageCard extends StatefulWidget {
   final NexusImage image;
   final VoidCallback onTap;
+  final ValueChanged<String>? onCategoryTap;
 
-  const ImageCard({super.key, required this.image, required this.onTap});
+  const ImageCard({
+    super.key,
+    required this.image,
+    required this.onTap,
+    this.onCategoryTap,
+  });
 
   @override
   State<ImageCard> createState() => _ImageCardState();
@@ -320,17 +326,22 @@ class _ImageCardState extends State<ImageCard> {
               ),
               const Spacer(),
               if (image.categoryName != null)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: NexusColors.border),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    image.categoryName!,
-                    style: const TextStyle(
-                        color: NexusColors.textMuted, fontSize: 11),
+                GestureDetector(
+                  onTap: widget.onCategoryTap == null
+                      ? null
+                      : () => widget.onCategoryTap!(image.categoryName!),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: NexusColors.border),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      image.categoryName!,
+                      style: const TextStyle(
+                          color: NexusColors.textMuted, fontSize: 11),
+                    ),
                   ),
                 ),
               const SizedBox(width: 10),
