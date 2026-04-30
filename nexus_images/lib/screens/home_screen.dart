@@ -19,6 +19,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const double _navBarHeight = 48;
+
   int _currentTab = 0;
 
   final ScrollController _scrollController = ScrollController();
@@ -41,6 +43,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   bool get _hasActiveSearch =>
       (_searchText != null && _searchText!.isNotEmpty) || _gameId != null;
+
+  bool get _hasNonDefaultSort => _sort != SortOption.newest;
 
   String get _searchSummary {
     final parts = <String>[];
@@ -190,21 +194,32 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _goHome() {
-    if (_hasActiveSearch) {
+    setState(() {
       _searchText = null;
       _gameId = null;
       _sort = SortOption.newest;
       _activeFacets = {};
-    }
+      _currentTab = 0;
+    });
     if (_scrollController.hasClients) _scrollController.jumpTo(0);
     _performSearch();
+    _showToast('All filters removed');
+  }
+
+  void _refreshFeed() {
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
+    _performSearch();
+    _showToast('Showing latest results');
+  }
+
+  void _showToast(String message) {
     ScaffoldMessenger.of(context)
       ..clearSnackBars()
       ..showSnackBar(
         SnackBar(
-          content: const Text(
-            'Feed refreshed',
-            style: TextStyle(color: NexusColors.textPrimary),
+          content: Text(
+            message,
+            style: const TextStyle(color: NexusColors.textPrimary),
           ),
           duration: const Duration(seconds: 2),
           backgroundColor: NexusColors.darkBrown,
@@ -215,7 +230,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       );
-    setState(() => _currentTab = 0);
   }
 
   void _onSearchSubmitted({
@@ -233,6 +247,28 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_scrollController.hasClients) _scrollController.jumpTo(0);
     _performSearch();
   }
+
+  void _filterByGameDomain(String domain) {
+    final game = _games.where((g) => g.domainName == domain).firstOrNull;
+    if (game == null) return;
+    if (_gameId == game.id) return;
+    setState(() {
+      _gameId = game.id;
+      _currentTab = 0;
+    });
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
+    _performSearch();
+  }
+
+  void _clearSearch() {
+    setState(() {
+      _searchText = null;
+      _gameId = null;
+    });
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
+    _performSearch();
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -271,15 +307,53 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: NexusColors.primary,
                     ),
                   ),
-                  if (_hasActiveSearch)
-                    Text(
-                      _searchSummary,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: NexusColors.textMuted,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  if (_hasActiveSearch || _hasNonDefaultSort)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        if (_hasActiveSearch) ...[
+                          Flexible(
+                            child: Text(
+                              _searchSummary,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: NexusColors.textMuted,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          GestureDetector(
+                            onTap: _clearSearch,
+                            behavior: HitTestBehavior.opaque,
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: Icon(
+                                PhosphorIcons.x(PhosphorIconsStyle.bold),
+                                size: 14,
+                                color: NexusColors.textMuted,
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (_hasNonDefaultSort) ...[
+                          if (_hasActiveSearch) const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              _sort.label,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: NexusColors.textMuted,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                 ],
               ),
@@ -324,40 +398,83 @@ class _HomeScreenState extends State<HomeScreen> {
           SearchScreen(
             games: _games,
             onSearch: _onSearchSubmitted,
+            onCancel: () => setState(() => _currentTab = 0),
           ),
         ],
       ),
-      bottomNavigationBar: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: BottomNavigationBar(
-            currentIndex: _currentTab,
-            onTap: (i) {
-              if (i == 0) {
-                _goHome();
-              } else {
-                setState(() => _currentTab = i);
-              }
-            },
-            backgroundColor: NexusColors.surface.withValues(alpha: 0.6),
-            selectedItemColor: NexusColors.primary,
-            unselectedItemColor: NexusColors.textMuted,
-            type: BottomNavigationBarType.fixed,
-            elevation: 0,
-            items: [
-              BottomNavigationBarItem(
-                icon: Icon(PhosphorIcons.house()),
-                activeIcon:
-                    Icon(PhosphorIcons.house(PhosphorIconsStyle.fill)),
-                label: 'Feed',
+      bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Widget _buildBottomNav() {
+    final bottomSafe = MediaQuery.of(context).padding.bottom;
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          height: _navBarHeight + bottomSafe,
+          padding: EdgeInsets.only(bottom: bottomSafe),
+          decoration: BoxDecoration(
+            color: NexusColors.surface.withValues(alpha: 0.6),
+            border: Border(
+              top: BorderSide(
+                color: NexusColors.border.withValues(alpha: 0.4),
+                width: 0.5,
               ),
-              BottomNavigationBarItem(
-                icon: Icon(PhosphorIcons.magnifyingGlass()),
-                activeIcon: Icon(
-                    PhosphorIcons.magnifyingGlass(PhosphorIconsStyle.bold)),
-                label: 'Search',
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _navButton(
+                icon: _currentTab == 0
+                    ? PhosphorIcons.house(PhosphorIconsStyle.fill)
+                    : PhosphorIcons.house(),
+                active: _currentTab == 0,
+                onTap: () {
+                  if (_currentTab == 0) {
+                    _goHome();
+                  } else {
+                    setState(() => _currentTab = 0);
+                  }
+                },
+              ),
+              _navButton(
+                icon: _currentTab == 1
+                    ? PhosphorIcons.magnifyingGlass(PhosphorIconsStyle.bold)
+                    : PhosphorIcons.magnifyingGlass(),
+                active: _currentTab == 1,
+                onTap: () => setState(() => _currentTab = 1),
+              ),
+              _navButton(
+                icon: PhosphorIcons.arrowsClockwise(),
+                active: false,
+                onTap: _refreshFeed,
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _navButton({
+    required IconData icon,
+    required bool active,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          height: _navBarHeight,
+          child: Center(
+            child: Icon(
+              icon,
+              color: NexusColors.textMuted,
+              size: 22,
+            ),
           ),
         ),
       ),
@@ -367,7 +484,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildFeed() {
     final media = MediaQuery.of(context);
     final topInset = media.padding.top + kToolbarHeight;
-    final bottomInset = media.padding.bottom + kBottomNavigationBarHeight;
+    final bottomInset = media.padding.bottom + _navBarHeight;
 
     if (_loading) {
       return ListView.builder(
@@ -435,6 +552,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 image: _images[index],
                 onTap: () => _openLightbox(_images[index]),
                 onCategoryTap: (value) => _addFacet('category', value),
+                onGameTap: _filterByGameDomain,
               ),
               childCount: _images.length,
             ),

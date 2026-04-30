@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import '../models/nexus_image.dart';
 import '../theme.dart';
@@ -52,84 +54,120 @@ class FacetsBar extends StatelessWidget {
       return b.count.compareTo(a.count);
     });
 
-    return Container(
-      height: 100,
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: const BoxDecoration(
-        color: NexusColors.surface,
-        border: Border(
-          bottom: BorderSide(color: NexusColors.border, width: 0.5),
-        ),
-      ),
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: categoryItems.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 16),
-        itemBuilder: (_, i) {
-          final item = categoryItems[i];
-          final isActive =
-              activeFacets['category']?.contains(item.value) ?? false;
-          return GestureDetector(
-            onTap: () => onToggle('category', item.value),
-            child: SizedBox(
-              width: 68,
-              child: Column(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: isActive
-                          ? const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                NexusColors.primary,
-                                NexusColors.primaryLight,
-                              ],
-                            )
-                          : null,
-                      color: isActive ? null : NexusColors.background,
-                      border: Border.all(
-                        color: isActive
-                            ? Colors.transparent
-                            : NexusColors.border,
-                        width: 2,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        _formatCount(item.count),
-                        style: TextStyle(
-                          color: isActive
-                              ? NexusColors.textPrimary
-                              : NexusColors.textMuted,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.value,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isActive
-                          ? NexusColors.textPrimary
-                          : NexusColors.textMuted,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: Container(
+          height: 100,
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: NexusColors.surface.withValues(alpha: 0.6),
+            border: Border(
+              bottom: BorderSide(
+                color: NexusColors.border.withValues(alpha: 0.4),
+                width: 0.5,
               ),
             ),
-          );
-        },
+          ),
+          child: Stack(
+            children: [
+              ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: categoryItems.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 16),
+                itemBuilder: (_, i) {
+                  final item = categoryItems[i];
+                  final isActive =
+                      activeFacets['category']?.contains(item.value) ?? false;
+                  return GestureDetector(
+                    onTap: () => onToggle('category', item.value),
+                    child: SizedBox(
+                      width: 68,
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: isActive
+                                  ? const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        NexusColors.primary,
+                                        NexusColors.primaryLight,
+                                      ],
+                                    )
+                                  : null,
+                              color: isActive ? null : NexusColors.surface,
+                              border: Border.all(
+                                color: isActive
+                                    ? Colors.transparent
+                                    : NexusColors.border,
+                                width: 2,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                _formatCount(item.count),
+                                style: TextStyle(
+                                  color: isActive
+                                      ? NexusColors.textPrimary
+                                      : NexusColors.textMuted,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            item.value,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isActive
+                                  ? NexusColors.textPrimary
+                                  : NexusColors.textMuted,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+              IgnorePointer(child: _edgeFade(left: true)),
+              IgnorePointer(child: _edgeFade(left: false)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _edgeFade({required bool left}) {
+    return Positioned(
+      top: 0,
+      bottom: 0,
+      left: left ? 0 : null,
+      right: left ? null : 0,
+      width: 24,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: left ? Alignment.centerLeft : Alignment.centerRight,
+            end: left ? Alignment.centerRight : Alignment.centerLeft,
+            colors: [
+              NexusColors.surface.withValues(alpha: 0.7),
+              NexusColors.surface.withValues(alpha: 0),
+            ],
+          ),
+        ),
       ),
     );
   }

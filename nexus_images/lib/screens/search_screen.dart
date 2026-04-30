@@ -12,11 +12,13 @@ class SearchScreen extends StatefulWidget {
     SortOption sort,
     int perPage,
   }) onSearch;
+  final VoidCallback? onCancel;
 
   const SearchScreen({
     super.key,
     required this.games,
     required this.onSearch,
+    this.onCancel,
   });
 
   @override
@@ -165,12 +167,33 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     final media = MediaQuery.of(context);
     final topInset = media.padding.top + kToolbarHeight;
-    final bottomInset = media.padding.bottom + kBottomNavigationBarHeight;
+    const navBarHeight = 48.0;
+    final bottomInset = media.padding.bottom + navBarHeight;
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: ListView(
         padding: EdgeInsets.fromLTRB(16, topInset + 8, 16, bottomInset + 16),
         children: [
+          if (widget.onCancel != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: GestureDetector(
+                onTap: () {
+                  FocusScope.of(context).unfocus();
+                  widget.onCancel!();
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Icon(
+                    PhosphorIcons.x(PhosphorIconsStyle.bold),
+                    size: 18,
+                    color: NexusColors.textMuted,
+                  ),
+                ),
+              ),
+            ),
+          if (widget.onCancel != null) const SizedBox(height: 4),
           // Search field
           TextField(
             controller: _searchController,

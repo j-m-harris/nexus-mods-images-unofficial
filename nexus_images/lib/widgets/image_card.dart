@@ -12,12 +12,14 @@ class ImageCard extends StatefulWidget {
   final NexusImage image;
   final VoidCallback onTap;
   final ValueChanged<String>? onCategoryTap;
+  final ValueChanged<String>? onGameTap;
 
   const ImageCard({
     super.key,
     required this.image,
     required this.onTap,
     this.onCategoryTap,
+    this.onGameTap,
   });
 
   @override
@@ -34,6 +36,7 @@ class _ImageCardState extends State<ImageCard> {
   ImageStream? _ratioStream;
   ImageStreamListener? _ratioListener;
   TapGestureRecognizer? _authorTap;
+  TapGestureRecognizer? _gameTap;
 
   @override
   void initState() {
@@ -41,6 +44,7 @@ class _ImageCardState extends State<ImageCard> {
     _startUpgradeTimer();
     _resolveImageAspect();
     _bindAuthorTap();
+    _bindGameTap();
   }
 
   @override
@@ -53,20 +57,38 @@ class _ImageCardState extends State<ImageCard> {
       _detachRatioListener();
       _authorTap?.dispose();
       _authorTap = null;
+      _gameTap?.dispose();
+      _gameTap = null;
       _startUpgradeTimer();
       _resolveImageAspect();
       _bindAuthorTap();
+      _bindGameTap();
+    } else if (oldWidget.onGameTap != widget.onGameTap) {
+      _gameTap?.dispose();
+      _gameTap = null;
+      _bindGameTap();
     }
   }
 
   void _bindAuthorTap() {
+    if (widget.image.ownerMemberId == null) return;
+    _authorTap = TapGestureRecognizer()..onTap = _openAuthorProfile;
+  }
+
+  void _openAuthorProfile() {
     final memberId = widget.image.ownerMemberId;
     if (memberId == null) return;
-    _authorTap = TapGestureRecognizer()
-      ..onTap = () => launchUrl(
-            Uri.parse('https://www.nexusmods.com/users/$memberId'),
-            mode: LaunchMode.externalApplication,
-          );
+    launchUrl(
+      Uri.parse('https://www.nexusmods.com/users/$memberId'),
+      mode: LaunchMode.externalApplication,
+    );
+  }
+
+  void _bindGameTap() {
+    final domain = widget.image.gameDomain;
+    final cb = widget.onGameTap;
+    if (domain == null || cb == null) return;
+    _gameTap = TapGestureRecognizer()..onTap = () => cb(domain);
   }
 
   void _resolveImageAspect() {
@@ -119,6 +141,7 @@ class _ImageCardState extends State<ImageCard> {
     _upgradeTimer?.cancel();
     _detachRatioListener();
     _authorTap?.dispose();
+    _gameTap?.dispose();
     super.dispose();
   }
 
@@ -171,30 +194,35 @@ class _ImageCardState extends State<ImageCard> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Row(
             children: [
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [NexusColors.primary, NexusColors.primaryLight],
+              GestureDetector(
+                onTap: image.ownerMemberId == null
+                    ? null
+                    : _openAuthorProfile,
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [NexusColors.primary, NexusColors.primaryLight],
+                    ),
+                    border: Border.all(color: NexusColors.border, width: 1),
                   ),
-                  border: Border.all(color: NexusColors.border, width: 1),
-                ),
-                child: image.ownerAvatar != null
-                    ? ClipOval(
-                        child: CachedNetworkImage(
-                          imageUrl: image.ownerAvatar!,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => Icon(
-                            PhosphorIcons.user(PhosphorIconsStyle.fill),
-                            color: NexusColors.textPrimary,
-                            size: 14,
+                  child: image.ownerAvatar != null
+                      ? ClipOval(
+                          child: CachedNetworkImage(
+                            imageUrl: image.ownerAvatar!,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => Icon(
+                              PhosphorIcons.user(PhosphorIconsStyle.fill),
+                              color: NexusColors.textPrimary,
+                              size: 14,
+                            ),
                           ),
-                        ),
-                      )
-                    : Icon(PhosphorIcons.user(PhosphorIconsStyle.fill),
-                        color: NexusColors.textPrimary, size: 14),
+                        )
+                      : Icon(PhosphorIcons.user(PhosphorIconsStyle.fill),
+                          color: NexusColors.textPrimary, size: 14),
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -210,12 +238,18 @@ class _ImageCardState extends State<ImageCard> {
                         style: const TextStyle(fontWeight: FontWeight.w600),
                         recognizer: _authorTap,
                       ),
-                      if (image.gameName != null)
+                      if (image.gameName != null) ...[
+                        const TextSpan(
+                          text: ' · ',
+                          style: TextStyle(color: NexusColors.textMuted),
+                        ),
                         TextSpan(
-                          text: ' · ${image.gameName!}',
+                          text: image.gameName!,
                           style: const TextStyle(
                               color: NexusColors.textMuted),
+                          recognizer: _gameTap,
                         ),
+                      ],
                     ],
                   ),
                 ),
@@ -238,6 +272,9 @@ class _ImageCardState extends State<ImageCard> {
                     color: NexusColors.textSecondary, fontSize: 12),
               ),
               const SizedBox(width: 10),
+              Icon(PhosphorIcons.clock(),
+                  color: NexusColors.textSecondary, size: 16),
+              const SizedBox(width: 4),
               Text(
                 _timeAgo(image.createdAt),
                 style: const TextStyle(
@@ -338,7 +375,10 @@ class _ImageCardState extends State<ImageCard> {
 
         // --- Action bar ---
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: image.displayDescriptionInline != null &&
+                  image.displayDescriptionInline!.isNotEmpty
+              ? const EdgeInsets.fromLTRB(12, 8, 12, 2)
+              : const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
               Expanded(
