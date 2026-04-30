@@ -282,11 +282,12 @@ class _ImageCardState extends State<ImageCard> {
           ),
         ),
 
-        if (image.description != null && image.description!.isNotEmpty)
+        if (image.displayDescriptionInline != null &&
+            image.displayDescriptionInline!.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 12, right: 12, top: 3),
             child: Text(
-              image.description!,
+              image.displayDescriptionInline!,
               style: const TextStyle(
                   color: NexusColors.textMuted, fontSize: 12),
               maxLines: 1,

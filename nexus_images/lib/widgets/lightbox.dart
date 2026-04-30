@@ -142,11 +142,11 @@ class _LightboxViewState extends State<LightboxView>
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      if (image.description != null &&
-                          image.description!.isNotEmpty) ...[
+                      if (image.displayDescription != null &&
+                          image.displayDescription!.isNotEmpty) ...[
                         const SizedBox(height: 8),
                         Text(
-                          image.description!,
+                          image.displayDescription!,
                           style: const TextStyle(
                             color: NexusColors.textMuted,
                             fontSize: 12,

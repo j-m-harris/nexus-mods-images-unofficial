@@ -57,6 +57,35 @@ class NexusImage {
   }
 
   String get displayTitle => caption ?? name;
+
+  String? get displayDescription => _stripDescription(inline: false);
+
+  String? get displayDescriptionInline => _stripDescription(inline: true);
+
+  String? _stripDescription({required bool inline}) {
+    final raw = description;
+    if (raw == null || raw.isEmpty) return raw;
+    final breakReplacement = inline ? ' ' : '\n';
+    final paragraphReplacement = inline ? ' ' : '\n\n';
+    final stripped = raw
+        .replaceAll(
+            RegExp(r'<br\s*/?>', caseSensitive: false), breakReplacement)
+        .replaceAll(
+            RegExp(r'</p\s*>', caseSensitive: false), paragraphReplacement)
+        .replaceAll(RegExp(r'<[^>]*>'), '');
+    final decoded = stripped
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'")
+        .replaceAll('&apos;', "'");
+    if (inline) {
+      return decoded.replaceAll(RegExp(r'\s+'), ' ').trim();
+    }
+    return decoded.replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
+  }
 }
 
 class NexusGame {
