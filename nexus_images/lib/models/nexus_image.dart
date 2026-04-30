@@ -16,6 +16,7 @@ class NexusImage {
   final String? ownerName;
   final String? ownerAvatar;
   final int? ownerMemberId;
+  final bool adult;
 
   NexusImage({
     required this.id,
@@ -35,6 +36,7 @@ class NexusImage {
     this.ownerName,
     this.ownerAvatar,
     this.ownerMemberId,
+    this.adult = false,
   });
 
   factory NexusImage.fromJson(Map<String, dynamic> json) {
@@ -56,6 +58,7 @@ class NexusImage {
       ownerName: json['owner']?['name'],
       ownerAvatar: json['owner']?['avatar'],
       ownerMemberId: json['owner']?['memberId'],
+      adult: json['adult'] == true,
     );
   }
 

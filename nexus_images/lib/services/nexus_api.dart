@@ -42,7 +42,7 @@ class NexusApi {
           ... on Image {
             id name title caption description
             url thumbnailUrl views rating
-            createdAt siteUrl
+            createdAt siteUrl adult
             category { name }
             game { name domainName }
             owner { name avatar memberId }
