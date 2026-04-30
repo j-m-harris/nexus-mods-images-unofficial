@@ -138,12 +138,12 @@ class _ImageCardState extends State<ImageCard> {
       children: [
         // --- User header row ---
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 24,
+                height: 24,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: const LinearGradient(
@@ -159,39 +159,34 @@ class _ImageCardState extends State<ImageCard> {
                           errorWidget: (_, __, ___) => const Icon(
                             Icons.person,
                             color: NexusColors.textPrimary,
-                            size: 20,
+                            size: 14,
                           ),
                         ),
                       )
                     : const Icon(Icons.person,
-                        color: NexusColors.textPrimary, size: 20),
+                        color: NexusColors.textPrimary, size: 14),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      image.ownerName ?? 'Unknown',
-                      style: const TextStyle(
-                        color: NexusColors.textPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                child: RichText(
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  text: TextSpan(
+                    style: const TextStyle(
+                        fontSize: 13, color: NexusColors.textPrimary),
+                    children: [
+                      TextSpan(
+                        text: image.ownerName ?? 'Unknown',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (image.gameName != null)
-                      Text(
-                        image.gameName!,
-                        style: const TextStyle(
-                          color: NexusColors.textMuted,
-                          fontSize: 12,
+                      if (image.gameName != null)
+                        TextSpan(
+                          text: ' · ${image.gameName!}',
+                          style: const TextStyle(
+                              color: NexusColors.textMuted),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               Text(
@@ -200,12 +195,6 @@ class _ImageCardState extends State<ImageCard> {
                   color: NexusColors.darkBrown,
                   fontSize: 12,
                 ),
-              ),
-              const SizedBox(width: 4),
-              GestureDetector(
-                onTap: () => _showMoreMenu(context),
-                child: const Icon(Icons.more_vert,
-                    color: NexusColors.textMuted, size: 20),
               ),
             ],
           ),
@@ -387,60 +376,10 @@ class _ImageCardState extends State<ImageCard> {
             ),
           ),
 
-        const SizedBox(height: 4),
-        const Divider(color: NexusColors.border, height: 1, thickness: 0.5),
+        const SizedBox(height: 6),
+        Container(height: 6, color: NexusColors.imagePlaceholder),
       ],
     );
   }
 
-  void _showMoreMenu(BuildContext context) {
-    final image = widget.image;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: NexusColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: NexusColors.border,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            if (image.siteUrl != null)
-              ListTile(
-                leading:
-                    const Icon(Icons.open_in_new, color: NexusColors.primary),
-                title: const Text('View on Nexus Mods',
-                    style: TextStyle(color: NexusColors.textPrimary)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  launchUrl(Uri.parse(image.siteUrl!),
-                      mode: LaunchMode.externalApplication);
-                },
-              ),
-            ListTile(
-              leading:
-                  const Icon(Icons.fullscreen, color: NexusColors.primary),
-              title: const Text('View Full Image',
-                  style: TextStyle(color: NexusColors.textPrimary)),
-              onTap: () {
-                Navigator.pop(ctx);
-                launchUrl(Uri.parse(image.url),
-                    mode: LaunchMode.externalApplication);
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
 }
