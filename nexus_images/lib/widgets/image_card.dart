@@ -189,6 +189,24 @@ class _ImageCardState extends State<ImageCard> {
                   ),
                 ),
               ),
+              const Icon(Icons.visibility_outlined,
+                  color: NexusColors.textSecondary, size: 16),
+              const SizedBox(width: 4),
+              Text(
+                _formatNumber(image.views),
+                style: const TextStyle(
+                    color: NexusColors.textSecondary, fontSize: 12),
+              ),
+              const SizedBox(width: 10),
+              const Icon(Icons.star_border_rounded,
+                  color: NexusColors.textSecondary, size: 16),
+              const SizedBox(width: 4),
+              Text(
+                '${image.rating}',
+                style: const TextStyle(
+                    color: NexusColors.textSecondary, fontSize: 12),
+              ),
+              const SizedBox(width: 10),
               Text(
                 _timeAgo(image.createdAt),
                 style: const TextStyle(
@@ -296,24 +314,18 @@ class _ImageCardState extends State<ImageCard> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             children: [
-              const Icon(Icons.visibility_outlined,
-                  color: NexusColors.textSecondary, size: 22),
-              const SizedBox(width: 6),
-              Text(
-                _formatNumber(image.views),
-                style: const TextStyle(
-                    color: NexusColors.textSecondary, fontSize: 14),
+              Expanded(
+                child: Text(
+                  image.displayTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: NexusColors.warmTan,
+                  ),
+                ),
               ),
-              const SizedBox(width: 18),
-              const Icon(Icons.star_border_rounded,
-                  color: NexusColors.textSecondary, size: 22),
-              const SizedBox(width: 6),
-              Text(
-                '${image.rating}',
-                style: const TextStyle(
-                    color: NexusColors.textSecondary, fontSize: 14),
-              ),
-              const Spacer(),
+              const SizedBox(width: 10),
               if (image.categoryName != null)
                 GestureDetector(
                   onTap: widget.onCategoryTap == null
@@ -347,21 +359,6 @@ class _ImageCardState extends State<ImageCard> {
             ],
           ),
         ),
-
-        // --- Caption ---
-        if (image.displayTitle.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              image.displayTitle,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 13,
-                color: NexusColors.warmTan,
-              ),
-            ),
-          ),
 
         if (image.displayDescriptionInline != null &&
             image.displayDescriptionInline!.isNotEmpty)
