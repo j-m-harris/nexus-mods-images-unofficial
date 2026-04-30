@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(flutter analyze *)"
+      "Bash(flutter analyze *)",
+      "Bash(curl -s -X POST https://api.nexusmods.com/v2/graphql -H 'Content-Type: application/json' -d '{\"query\":\"query { __type\\(name: \\\\\"Image\\\\\"\\) { fields { name type { name kind ofType { name } } } } }\"}')"
     ]
   }
 }

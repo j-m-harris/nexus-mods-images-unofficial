@@ -15,9 +15,20 @@ class FacetsBar extends StatelessWidget {
   });
 
   String _formatCount(int n) {
-    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
+    if (n >= 1000000) {
+      return n >= 10000000
+          ? '${n ~/ 1000000}M'
+          : '${_trim(n / 1000000)}M';
+    }
+    if (n >= 1000) {
+      return n >= 10000 ? '${n ~/ 1000}K' : '${_trim(n / 1000)}K';
+    }
     return '$n';
+  }
+
+  String _trim(double v) {
+    final s = v.toStringAsFixed(1);
+    return s.endsWith('.0') ? s.substring(0, s.length - 2) : s;
   }
 
   @override

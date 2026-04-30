@@ -16,13 +16,20 @@ class ImageCard extends StatefulWidget {
 }
 
 class _ImageCardState extends State<ImageCard> {
+  static const double _cardAspect = 16 / 9;
+  static const double _cropThreshold = 0.9;
+
   bool _fullResReady = false;
   Timer? _upgradeTimer;
+  double? _imageAspect;
+  ImageStream? _ratioStream;
+  ImageStreamListener? _ratioListener;
 
   @override
   void initState() {
     super.initState();
     _startUpgradeTimer();
+    _resolveImageAspect();
   }
 
   @override
@@ -30,10 +37,47 @@ class _ImageCardState extends State<ImageCard> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.image.id != widget.image.id) {
       _fullResReady = false;
+      _imageAspect = null;
       _upgradeTimer?.cancel();
+      _detachRatioListener();
       _startUpgradeTimer();
+      _resolveImageAspect();
     }
   }
+
+  void _resolveImageAspect() {
+    final provider = CachedNetworkImageProvider(widget.image.thumbnailUrl);
+    final stream = provider.resolve(const ImageConfiguration());
+    final listener = ImageStreamListener((info, _) {
+      if (!mounted) return;
+      setState(() {
+        _imageAspect = info.image.width / info.image.height;
+      });
+    });
+    stream.addListener(listener);
+    _ratioStream = stream;
+    _ratioListener = listener;
+  }
+
+  void _detachRatioListener() {
+    if (_ratioStream != null && _ratioListener != null) {
+      _ratioStream!.removeListener(_ratioListener!);
+    }
+    _ratioStream = null;
+    _ratioListener = null;
+  }
+
+  bool get _isCropped {
+    final aspect = _imageAspect;
+    if (aspect == null) return false;
+    final ratio = aspect < _cardAspect
+        ? aspect / _cardAspect
+        : _cardAspect / aspect;
+    return ratio < _cropThreshold;
+  }
+
+  bool get _cropsHorizontally =>
+      _imageAspect != null && _imageAspect! > _cardAspect;
 
   void _startUpgradeTimer() {
     _upgradeTimer = Timer(const Duration(seconds: 2), () {
@@ -49,6 +93,7 @@ class _ImageCardState extends State<ImageCard> {
   @override
   void dispose() {
     _upgradeTimer?.cancel();
+    _detachRatioListener();
     super.dispose();
   }
 
@@ -202,6 +247,28 @@ class _ImageCardState extends State<ImageCard> {
                         )
                       : const SizedBox.shrink(),
                 ),
+                if (_isCropped)
+                  IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: _cropsHorizontally
+                              ? Alignment.centerLeft
+                              : Alignment.topCenter,
+                          end: _cropsHorizontally
+                              ? Alignment.centerRight
+                              : Alignment.bottomCenter,
+                          stops: const [0.0, 0.22, 0.78, 1.0],
+                          colors: [
+                            Colors.black.withValues(alpha: 0.9),
+                            Colors.transparent,
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.9),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -260,27 +327,19 @@ class _ImageCardState extends State<ImageCard> {
         ),
 
         // --- Caption ---
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: RichText(
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            text: TextSpan(
+        if (image.displayTitle.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              image.displayTitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                  fontSize: 13, color: NexusColors.textPrimary),
-              children: [
-                TextSpan(
-                  text: '${image.ownerName ?? 'Unknown'} ',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                TextSpan(
-                  text: image.displayTitle,
-                  style: const TextStyle(color: NexusColors.warmTan),
-                ),
-              ],
+                fontSize: 13,
+                color: NexusColors.warmTan,
+              ),
             ),
           ),
-        ),
 
         if (image.displayDescriptionInline != null &&
             image.displayDescriptionInline!.isNotEmpty)

@@ -1,6 +1,7 @@
 class NexusImage {
   final String id;
   final String name;
+  final String? title;
   final String? caption;
   final String? description;
   final String url;
@@ -19,6 +20,7 @@ class NexusImage {
   NexusImage({
     required this.id,
     required this.name,
+    this.title,
     this.caption,
     this.description,
     required this.url,
@@ -39,6 +41,7 @@ class NexusImage {
     return NexusImage(
       id: json['id'].toString(),
       name: json['name'] ?? '',
+      title: json['title'],
       caption: json['caption'],
       description: json['description'],
       url: json['url'] ?? '',
@@ -56,7 +59,11 @@ class NexusImage {
     );
   }
 
-  String get displayTitle => caption ?? name;
+  String get displayTitle {
+    if (title != null && title!.isNotEmpty) return title!;
+    if (caption != null && caption!.isNotEmpty) return caption!;
+    return '';
+  }
 
   String? get displayDescription => _stripDescription(inline: false);
 

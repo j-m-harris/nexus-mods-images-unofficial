@@ -40,7 +40,7 @@ class NexusApi {
         facets { facet value count }
         nodes {
           ... on Image {
-            id name caption description
+            id name title caption description
             url thumbnailUrl views rating
             createdAt siteUrl
             category { name }
