@@ -7,7 +7,7 @@ class NexusImage {
   final String url;
   final String thumbnailUrl;
   final int views;
-  final double rating;
+  final int rating;
   final String? createdAt;
   final String? siteUrl;
   final String? categoryName;
@@ -49,7 +49,7 @@ class NexusImage {
       url: json['url'] ?? '',
       thumbnailUrl: json['thumbnailUrl'] ?? '',
       views: json['views'] ?? 0,
-      rating: (json['rating'] ?? 0).toDouble(),
+      rating: json['rating'] ?? 0,
       createdAt: json['createdAt'],
       siteUrl: json['siteUrl'],
       categoryName: json['category']?['name'],

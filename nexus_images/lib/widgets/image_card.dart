@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -30,12 +31,14 @@ class _ImageCardState extends State<ImageCard> {
   double? _imageAspect;
   ImageStream? _ratioStream;
   ImageStreamListener? _ratioListener;
+  TapGestureRecognizer? _authorTap;
 
   @override
   void initState() {
     super.initState();
     _startUpgradeTimer();
     _resolveImageAspect();
+    _bindAuthorTap();
   }
 
   @override
@@ -46,9 +49,22 @@ class _ImageCardState extends State<ImageCard> {
       _imageAspect = null;
       _upgradeTimer?.cancel();
       _detachRatioListener();
+      _authorTap?.dispose();
+      _authorTap = null;
       _startUpgradeTimer();
       _resolveImageAspect();
+      _bindAuthorTap();
     }
+  }
+
+  void _bindAuthorTap() {
+    final memberId = widget.image.ownerMemberId;
+    if (memberId == null) return;
+    _authorTap = TapGestureRecognizer()
+      ..onTap = () => launchUrl(
+            Uri.parse('https://www.nexusmods.com/users/$memberId'),
+            mode: LaunchMode.externalApplication,
+          );
   }
 
   void _resolveImageAspect() {
@@ -100,6 +116,7 @@ class _ImageCardState extends State<ImageCard> {
   void dispose() {
     _upgradeTimer?.cancel();
     _detachRatioListener();
+    _authorTap?.dispose();
     super.dispose();
   }
 
@@ -178,6 +195,7 @@ class _ImageCardState extends State<ImageCard> {
                       TextSpan(
                         text: image.ownerName ?? 'Unknown',
                         style: const TextStyle(fontWeight: FontWeight.w600),
+                        recognizer: _authorTap,
                       ),
                       if (image.gameName != null)
                         TextSpan(
@@ -325,8 +343,8 @@ class _ImageCardState extends State<ImageCard> {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
-              if (image.categoryName != null)
+              if (image.categoryName != null) ...[
+                const SizedBox(width: 10),
                 GestureDetector(
                   onTap: widget.onCategoryTap == null
                       ? null
@@ -345,6 +363,7 @@ class _ImageCardState extends State<ImageCard> {
                     ),
                   ),
                 ),
+              ],
               const SizedBox(width: 10),
               GestureDetector(
                 onTap: () {
