@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/nexus_image.dart';
 import '../theme.dart';
@@ -22,6 +23,9 @@ class _LightboxViewState extends State<LightboxView>
   late final AnimationController _animationController;
   Animation<Matrix4>? _zoomAnimation;
   TapDownDetails? _lastDoubleTapDetails;
+  double? _imageAspect;
+  ImageStream? _aspectStream;
+  ImageStreamListener? _aspectListener;
 
   @override
   void initState() {
@@ -34,10 +38,35 @@ class _LightboxViewState extends State<LightboxView>
           _transformController.value = _zoomAnimation!.value;
         }
       });
+    _resolveImageAspect();
+  }
+
+  void _resolveImageAspect() {
+    final provider = CachedNetworkImageProvider(widget.image.url);
+    final stream = provider.resolve(const ImageConfiguration());
+    final listener = ImageStreamListener((info, _) {
+      if (!mounted) return;
+      setState(() {
+        _imageAspect = info.image.width / info.image.height;
+      });
+    });
+    stream.addListener(listener);
+    _aspectStream = stream;
+    _aspectListener = listener;
+  }
+
+  void _closeLightbox() {
+    if (_transformController.value != Matrix4.identity()) {
+      _transformController.value = Matrix4.identity();
+    }
+    Navigator.pop(context);
   }
 
   @override
   void dispose() {
+    if (_aspectStream != null && _aspectListener != null) {
+      _aspectStream!.removeListener(_aspectListener!);
+    }
     _transformController.dispose();
     _animationController.dispose();
     super.dispose();
@@ -73,7 +102,12 @@ class _LightboxViewState extends State<LightboxView>
     final dateStr =
         image.createdAt != null ? _formatDate(image.createdAt!) : '';
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _closeLightbox();
+      },
+      child: Scaffold(
       backgroundColor: Colors.black.withValues(alpha: 0.95),
       body: SafeArea(
         child: Stack(
@@ -82,7 +116,7 @@ class _LightboxViewState extends State<LightboxView>
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
+                    onTap: _closeLightbox,
                     onDoubleTapDown: (details) =>
                         _lastDoubleTapDetails = details,
                     onDoubleTap: _handleDoubleTap,
@@ -91,19 +125,29 @@ class _LightboxViewState extends State<LightboxView>
                       clipBehavior: Clip.none,
                       minScale: 1.0,
                       maxScale: 5.0,
-                      child: SizedBox.expand(
-                        child: CachedNetworkImage(
-                          imageUrl: image.url,
-                          fit: BoxFit.contain,
-                          placeholder: (_, __) => const Center(
-                            child: CircularProgressIndicator(
-                              color: NexusColors.primary,
+                      child: Center(
+                        child: AspectRatio(
+                          aspectRatio: _imageAspect ?? (16 / 9),
+                          child: Hero(
+                            tag: 'image-${image.id}',
+                            child: CachedNetworkImage(
+                              imageUrl: image.url,
+                              fit: BoxFit.cover,
+                              placeholder: (_, __) => CachedNetworkImage(
+                                imageUrl: image.thumbnailUrl,
+                                fit: BoxFit.cover,
+                                errorWidget: (_, __, ___) => const Center(
+                                  child: CircularProgressIndicator(
+                                    color: NexusColors.primary,
+                                  ),
+                                ),
+                              ),
+                              errorWidget: (_, __, ___) => Icon(
+                                PhosphorIcons.imageBroken(),
+                                color: NexusColors.textMuted,
+                                size: 64,
+                              ),
                             ),
-                          ),
-                          errorWidget: (_, __, ___) => const Icon(
-                            Icons.broken_image,
-                            color: NexusColors.textMuted,
-                            size: 64,
                           ),
                         ),
                       ),
@@ -145,8 +189,8 @@ class _LightboxViewState extends State<LightboxView>
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(
-                                    Icons.sports_esports,
+                                  Icon(
+                                    PhosphorIcons.gameController(),
                                     size: 14,
                                     color: NexusColors.warmTan,
                                   ),
@@ -205,14 +249,15 @@ class _LightboxViewState extends State<LightboxView>
               top: 8,
               right: 8,
               child: IconButton(
-                icon: const Icon(Icons.close,
+                icon: Icon(PhosphorIcons.x(PhosphorIconsStyle.bold),
                     color: NexusColors.textPrimary, size: 28),
-                onPressed: () => Navigator.pop(context),
+                onPressed: _closeLightbox,
               ),
             ),
           ],
         ),
       ),
+    ),
     );
   }
 

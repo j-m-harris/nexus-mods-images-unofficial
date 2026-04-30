@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/nexus_image.dart';
 import '../theme.dart';
@@ -150,9 +152,20 @@ class _ImageCardState extends State<ImageCard> {
   Widget build(BuildContext context) {
     final image = widget.image;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOut,
+      builder: (context, value, child) => Opacity(
+        opacity: value,
+        child: Transform.translate(
+          offset: Offset(0, (1 - value) * 8),
+          child: child,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
         // --- User header row ---
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -173,14 +186,14 @@ class _ImageCardState extends State<ImageCard> {
                         child: CachedNetworkImage(
                           imageUrl: image.ownerAvatar!,
                           fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => const Icon(
-                            Icons.person,
+                          errorWidget: (_, __, ___) => Icon(
+                            PhosphorIcons.user(PhosphorIconsStyle.fill),
                             color: NexusColors.textPrimary,
                             size: 14,
                           ),
                         ),
                       )
-                    : const Icon(Icons.person,
+                    : Icon(PhosphorIcons.user(PhosphorIconsStyle.fill),
                         color: NexusColors.textPrimary, size: 14),
               ),
               const SizedBox(width: 8),
@@ -207,7 +220,7 @@ class _ImageCardState extends State<ImageCard> {
                   ),
                 ),
               ),
-              const Icon(Icons.visibility_outlined,
+              Icon(PhosphorIcons.eye(),
                   color: NexusColors.textSecondary, size: 16),
               const SizedBox(width: 4),
               Text(
@@ -216,7 +229,7 @@ class _ImageCardState extends State<ImageCard> {
                     color: NexusColors.textSecondary, fontSize: 12),
               ),
               const SizedBox(width: 10),
-              const Icon(Icons.star_border_rounded,
+              Icon(PhosphorIcons.star(),
                   color: NexusColors.textSecondary, size: 16),
               const SizedBox(width: 4),
               Text(
@@ -245,26 +258,22 @@ class _ImageCardState extends State<ImageCard> {
               fit: StackFit.expand,
               children: [
                 // Thumbnail (always present)
-                CachedNetworkImage(
-                  imageUrl: image.thumbnailUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
-                    color: NexusColors.imagePlaceholder,
-                    child: const Center(
-                      child: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: NexusColors.primary,
-                        ),
-                      ),
+                Hero(
+                  tag: 'image-${image.id}',
+                  child: CachedNetworkImage(
+                    imageUrl: image.thumbnailUrl,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => Shimmer.fromColors(
+                      baseColor: NexusColors.imagePlaceholder,
+                      highlightColor: NexusColors.surface,
+                      period: const Duration(milliseconds: 1400),
+                      child: Container(color: NexusColors.imagePlaceholder),
                     ),
-                  ),
-                  errorWidget: (_, __, ___) => Container(
-                    color: NexusColors.imagePlaceholder,
-                    child: const Icon(Icons.broken_image,
-                        color: NexusColors.textMuted),
+                    errorWidget: (_, __, ___) => Container(
+                      color: NexusColors.imagePlaceholder,
+                      child: Icon(PhosphorIcons.imageBroken(),
+                          color: NexusColors.textMuted),
+                    ),
                   ),
                 ),
                 // Full-res overlay (fades in when ready)
@@ -309,7 +318,7 @@ class _ImageCardState extends State<ImageCard> {
                           horizontal: 6, vertical: 3),
                       decoration: BoxDecoration(
                         color: Colors.red.shade700,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(NexusRadii.small),
                       ),
                       child: const Text(
                         'ADULT',
@@ -354,7 +363,7 @@ class _ImageCardState extends State<ImageCard> {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       border: Border.all(color: NexusColors.border),
-                      borderRadius: BorderRadius.circular(4),
+                      borderRadius: BorderRadius.circular(NexusRadii.pill),
                     ),
                     child: Text(
                       image.categoryName!,
@@ -372,7 +381,7 @@ class _ImageCardState extends State<ImageCard> {
                         mode: LaunchMode.externalApplication);
                   }
                 },
-                child: const Icon(Icons.open_in_new_rounded,
+                child: Icon(PhosphorIcons.arrowSquareOut(PhosphorIconsStyle.bold),
                     color: NexusColors.primary, size: 20),
               ),
             ],
@@ -382,7 +391,7 @@ class _ImageCardState extends State<ImageCard> {
         if (image.displayDescriptionInline != null &&
             image.displayDescriptionInline!.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(left: 12, right: 12, top: 3),
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
             child: Text(
               image.displayDescriptionInline!,
               style: const TextStyle(
@@ -391,10 +400,9 @@ class _ImageCardState extends State<ImageCard> {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-
-        const SizedBox(height: 6),
         Container(height: 6, color: NexusColors.imagePlaceholder),
-      ],
+        ],
+      ),
     );
   }
 

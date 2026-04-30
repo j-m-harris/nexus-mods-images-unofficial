@@ -1,10 +1,14 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../models/nexus_image.dart';
 import '../services/nexus_api.dart';
 import '../theme.dart';
 import '../widgets/image_card.dart';
 import '../widgets/facets_bar.dart';
 import '../widgets/lightbox.dart';
+import '../widgets/skeleton_card.dart';
 import 'search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -218,8 +222,15 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: NexusColors.background,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: NexusColors.surface,
+        backgroundColor: NexusColors.surface.withValues(alpha: 0.6),
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+            child: const SizedBox.expand(),
+          ),
+        ),
         title: Row(
           children: [
             GestureDetector(
@@ -261,7 +272,8 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           if (_currentTab == 0)
             PopupMenuButton<SortOption>(
-              icon: const Icon(Icons.sort, color: NexusColors.textPrimary),
+              icon: Icon(PhosphorIcons.arrowsDownUp(),
+                  color: NexusColors.textPrimary),
               color: NexusColors.surface,
               onSelected: (sort) {
                 _sort = sort;
@@ -311,15 +323,15 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedItemColor: NexusColors.primary,
         unselectedItemColor: NexusColors.textMuted,
         type: BottomNavigationBarType.fixed,
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
+            icon: Icon(PhosphorIcons.house()),
+            activeIcon: Icon(PhosphorIcons.house(PhosphorIconsStyle.fill)),
             label: 'Feed',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            activeIcon: Icon(Icons.search),
+            icon: Icon(PhosphorIcons.magnifyingGlass()),
+            activeIcon: Icon(PhosphorIcons.magnifyingGlass(PhosphorIconsStyle.bold)),
             label: 'Search',
           ),
         ],
@@ -328,9 +340,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildFeed() {
+    final topInset = MediaQuery.of(context).padding.top + kToolbarHeight;
+
     if (_loading) {
-      return const Center(
-        child: CircularProgressIndicator(color: NexusColors.primary),
+      return ListView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.only(top: topInset),
+        itemCount: 5,
+        itemBuilder: (_, __) => const SkeletonCard(),
       );
     }
 
@@ -376,6 +393,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: CustomScrollView(
         controller: _scrollController,
         slivers: [
+          SliverToBoxAdapter(child: SizedBox(height: topInset)),
           if (_facets.isNotEmpty)
             SliverToBoxAdapter(
               child: FacetsBar(
@@ -395,17 +413,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           if (_loadingMore)
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    color: NexusColors.primary,
-                    strokeWidth: 2,
-                  ),
-                ),
-              ),
-            ),
+            const SliverToBoxAdapter(child: SkeletonCard()),
           if (_currentOffset >= _totalCount && _images.isNotEmpty)
             const SliverToBoxAdapter(
               child: Padding(

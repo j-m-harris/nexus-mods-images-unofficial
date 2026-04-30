@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Colors extracted from nexusmods.gif icon
 class NexusColors {
@@ -19,14 +20,22 @@ class NexusColors {
   static const error = Color(0xFFE74C3C);
 }
 
+class NexusRadii {
+  static const small = 8.0;
+  static const medium = 12.0;
+  static const large = 16.0;
+  static const pill = 999.0;
+}
+
 ThemeData nexusTheme() {
-  return ThemeData(
+  final base = ThemeData(
     brightness: Brightness.dark,
     scaffoldBackgroundColor: NexusColors.background,
     appBarTheme: const AppBarTheme(
-      backgroundColor: NexusColors.surface,
+      backgroundColor: Colors.transparent,
       foregroundColor: NexusColors.primary,
       elevation: 0,
+      scrolledUnderElevation: 0,
     ),
     colorScheme: const ColorScheme.dark(
       primary: NexusColors.primary,
@@ -37,18 +46,18 @@ ThemeData nexusTheme() {
       filled: true,
       fillColor: NexusColors.surface,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(NexusRadii.medium),
         borderSide: const BorderSide(color: NexusColors.border),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(NexusRadii.medium),
         borderSide: const BorderSide(color: NexusColors.border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(NexusRadii.medium),
         borderSide: const BorderSide(color: NexusColors.primary),
       ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       labelStyle: const TextStyle(color: NexusColors.textMuted, fontSize: 12),
       hintStyle: const TextStyle(color: NexusColors.darkBrown, fontSize: 14),
     ),
@@ -56,8 +65,17 @@ ThemeData nexusTheme() {
       style: ElevatedButton.styleFrom(
         backgroundColor: NexusColors.primary,
         foregroundColor: NexusColors.textPrimary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(NexusRadii.medium),
+        ),
       ),
+    ),
+  );
+
+  return base.copyWith(
+    textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
+      bodyColor: NexusColors.textPrimary,
+      displayColor: NexusColors.textPrimary,
     ),
   );
 }
