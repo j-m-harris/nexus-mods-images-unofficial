@@ -13,7 +13,8 @@
       "Bash(flutter analyze:*)",
       "Bash(flutter build:*)",
       "Bash(convert:*)",
-      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); print\\(json.dumps\\(data[0], indent=2\\)\\)\")"
+      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); print\\(json.dumps\\(data[0], indent=2\\)\\)\")",
+      "Bash(git -C /home/john/projects/images log --all -p -- nexus_images/pubspec.yaml)"
     ]
   }
 }

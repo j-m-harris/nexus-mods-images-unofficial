@@ -236,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Nexus Mods Images',
+                    'Nexus Mods Images Unofficial',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
