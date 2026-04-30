@@ -241,7 +241,7 @@ class _ImageCardState extends State<ImageCard> {
               Text(
                 _timeAgo(image.createdAt),
                 style: const TextStyle(
-                  color: NexusColors.darkBrown,
+                  color: NexusColors.textSecondary,
                   fontSize: 12,
                 ),
               ),
@@ -382,7 +382,7 @@ class _ImageCardState extends State<ImageCard> {
                   }
                 },
                 child: Icon(PhosphorIcons.arrowSquareOut(PhosphorIconsStyle.bold),
-                    color: NexusColors.primary, size: 20),
+                    color: NexusColors.primary, size: 16),
               ),
             ],
           ),

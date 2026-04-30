@@ -166,10 +166,26 @@ class _HomeScreenState extends State<HomeScreen> {
     _performSearch();
   }
 
+  void _addFacet(String facetName, String value) {
+    final existing = _activeFacets[facetName];
+    if (existing != null && existing.contains(value)) return;
+    setState(() {
+      _activeFacets.putIfAbsent(facetName, () => {}).add(value);
+    });
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
+    _performSearch();
+  }
+
   void _openLightbox(NexusImage image) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => LightboxView(image: image)),
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 240),
+        reverseTransitionDuration: const Duration(milliseconds: 220),
+        pageBuilder: (_, __, ___) => LightboxView(image: image),
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
+      ),
     );
   }
 
@@ -223,6 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: NexusColors.background,
       extendBodyBehindAppBar: true,
+      extendBody: true,
       appBar: AppBar(
         backgroundColor: NexusColors.surface.withValues(alpha: 0.6),
         flexibleSpace: ClipRect(
@@ -310,42 +327,52 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentTab,
-        onTap: (i) {
-          if (i == 0) {
-            _goHome();
-          } else {
-            setState(() => _currentTab = i);
-          }
-        },
-        backgroundColor: NexusColors.surface,
-        selectedItemColor: NexusColors.primary,
-        unselectedItemColor: NexusColors.textMuted,
-        type: BottomNavigationBarType.fixed,
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(PhosphorIcons.house()),
-            activeIcon: Icon(PhosphorIcons.house(PhosphorIconsStyle.fill)),
-            label: 'Feed',
+      bottomNavigationBar: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: BottomNavigationBar(
+            currentIndex: _currentTab,
+            onTap: (i) {
+              if (i == 0) {
+                _goHome();
+              } else {
+                setState(() => _currentTab = i);
+              }
+            },
+            backgroundColor: NexusColors.surface.withValues(alpha: 0.6),
+            selectedItemColor: NexusColors.primary,
+            unselectedItemColor: NexusColors.textMuted,
+            type: BottomNavigationBarType.fixed,
+            elevation: 0,
+            items: [
+              BottomNavigationBarItem(
+                icon: Icon(PhosphorIcons.house()),
+                activeIcon:
+                    Icon(PhosphorIcons.house(PhosphorIconsStyle.fill)),
+                label: 'Feed',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(PhosphorIcons.magnifyingGlass()),
+                activeIcon: Icon(
+                    PhosphorIcons.magnifyingGlass(PhosphorIconsStyle.bold)),
+                label: 'Search',
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(PhosphorIcons.magnifyingGlass()),
-            activeIcon: Icon(PhosphorIcons.magnifyingGlass(PhosphorIconsStyle.bold)),
-            label: 'Search',
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildFeed() {
-    final topInset = MediaQuery.of(context).padding.top + kToolbarHeight;
+    final media = MediaQuery.of(context);
+    final topInset = media.padding.top + kToolbarHeight;
+    final bottomInset = media.padding.bottom + kBottomNavigationBarHeight;
 
     if (_loading) {
       return ListView.builder(
         physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.only(top: topInset),
+        padding: EdgeInsets.only(top: topInset, bottom: bottomInset),
         itemCount: 5,
         itemBuilder: (_, __) => const SkeletonCard(),
       );
@@ -407,7 +434,7 @@ class _HomeScreenState extends State<HomeScreen> {
               (context, index) => ImageCard(
                 image: _images[index],
                 onTap: () => _openLightbox(_images[index]),
-                onCategoryTap: (value) => _toggleFacet('category', value),
+                onCategoryTap: (value) => _addFacet('category', value),
               ),
               childCount: _images.length,
             ),
@@ -426,6 +453,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+          SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
         ],
       ),
     );

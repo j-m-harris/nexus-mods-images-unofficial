@@ -56,9 +56,6 @@ class _LightboxViewState extends State<LightboxView>
   }
 
   void _closeLightbox() {
-    if (_transformController.value != Matrix4.identity()) {
-      _transformController.value = Matrix4.identity();
-    }
     Navigator.pop(context);
   }
 

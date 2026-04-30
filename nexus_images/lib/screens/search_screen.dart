@@ -163,11 +163,13 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final topInset = MediaQuery.of(context).padding.top + kToolbarHeight;
+    final media = MediaQuery.of(context);
+    final topInset = media.padding.top + kToolbarHeight;
+    final bottomInset = media.padding.bottom + kBottomNavigationBarHeight;
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: ListView(
-        padding: EdgeInsets.fromLTRB(16, topInset + 8, 16, 16),
+        padding: EdgeInsets.fromLTRB(16, topInset + 8, 16, bottomInset + 16),
         children: [
           // Search field
           TextField(
