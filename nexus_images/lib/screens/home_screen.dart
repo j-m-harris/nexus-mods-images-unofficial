@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../models/nexus_image.dart';
@@ -277,13 +275,7 @@ class _HomeScreenState extends State<HomeScreen> {
       extendBodyBehindAppBar: true,
       extendBody: true,
       appBar: AppBar(
-        backgroundColor: NexusColors.surface.withValues(alpha: 0.6),
-        flexibleSpace: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-            child: const SizedBox.expand(),
-          ),
-        ),
+        backgroundColor: NexusColors.surface,
         title: Row(
           children: [
             GestureDetector(
@@ -408,52 +400,44 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBottomNav() {
     final bottomSafe = MediaQuery.of(context).padding.bottom;
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          height: _navBarHeight + bottomSafe,
-          padding: EdgeInsets.only(bottom: bottomSafe),
-          decoration: BoxDecoration(
-            color: NexusColors.surface.withValues(alpha: 0.6),
-            border: Border(
-              top: BorderSide(
-                color: NexusColors.border.withValues(alpha: 0.4),
-                width: 0.5,
-              ),
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _navButton(
-                icon: _currentTab == 0
-                    ? PhosphorIcons.house(PhosphorIconsStyle.fill)
-                    : PhosphorIcons.house(),
-                active: _currentTab == 0,
-                onTap: () {
-                  if (_currentTab == 0) {
-                    _goHome();
-                  } else {
-                    setState(() => _currentTab = 0);
-                  }
-                },
-              ),
-              _navButton(
-                icon: _currentTab == 1
-                    ? PhosphorIcons.magnifyingGlass(PhosphorIconsStyle.bold)
-                    : PhosphorIcons.magnifyingGlass(),
-                active: _currentTab == 1,
-                onTap: () => setState(() => _currentTab = 1),
-              ),
-              _navButton(
-                icon: PhosphorIcons.arrowsClockwise(),
-                active: false,
-                onTap: _refreshFeed,
-              ),
-            ],
-          ),
+    return Container(
+      height: _navBarHeight + bottomSafe,
+      padding: EdgeInsets.only(bottom: bottomSafe),
+      decoration: const BoxDecoration(
+        color: NexusColors.surface,
+        border: Border(
+          top: BorderSide(color: NexusColors.border, width: 0.5),
         ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _navButton(
+            icon: _currentTab == 0
+                ? PhosphorIcons.house(PhosphorIconsStyle.fill)
+                : PhosphorIcons.house(),
+            active: _currentTab == 0,
+            onTap: () {
+              if (_currentTab == 0) {
+                _goHome();
+              } else {
+                setState(() => _currentTab = 0);
+              }
+            },
+          ),
+          _navButton(
+            icon: _currentTab == 1
+                ? PhosphorIcons.magnifyingGlass(PhosphorIconsStyle.bold)
+                : PhosphorIcons.magnifyingGlass(),
+            active: _currentTab == 1,
+            onTap: () => setState(() => _currentTab = 1),
+          ),
+          _navButton(
+            icon: PhosphorIcons.arrowsClockwise(),
+            active: false,
+            onTap: _refreshFeed,
+          ),
+        ],
       ),
     );
   }
