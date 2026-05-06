@@ -127,8 +127,13 @@ class _ImageCardState extends State<ImageCard> {
   void _startUpgradeTimer() {
     _upgradeTimer = Timer(const Duration(seconds: 2), () {
       if (!mounted) return;
-      final provider =
-          CachedNetworkImageProvider(widget.image.url);
+      final mq = MediaQuery.of(context);
+      final decodeWidth =
+          (mq.size.width * mq.devicePixelRatio).round();
+      final provider = CachedNetworkImageProvider(
+        widget.image.url,
+        maxWidth: decodeWidth,
+      );
       precacheImage(provider, context).then((_) {
         if (mounted) setState(() => _fullResReady = true);
       }).catchError((_) {});
@@ -173,6 +178,8 @@ class _ImageCardState extends State<ImageCard> {
   @override
   Widget build(BuildContext context) {
     final image = widget.image;
+    final mq = MediaQuery.of(context);
+    final decodeWidth = (mq.size.width * mq.devicePixelRatio).round();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -288,6 +295,7 @@ class _ImageCardState extends State<ImageCard> {
                   child: CachedNetworkImage(
                     imageUrl: image.thumbnailUrl,
                     fit: BoxFit.cover,
+                    memCacheWidth: decodeWidth,
                     placeholder: (_, __) =>
                         Container(color: NexusColors.imagePlaceholder),
                     errorWidget: (_, __, ___) => Container(
@@ -305,6 +313,7 @@ class _ImageCardState extends State<ImageCard> {
                       ? CachedNetworkImage(
                           imageUrl: image.url,
                           fit: BoxFit.cover,
+                          memCacheWidth: decodeWidth,
                         )
                       : const SizedBox.shrink(),
                 ),
