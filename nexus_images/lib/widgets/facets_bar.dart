@@ -53,7 +53,7 @@ class FacetsBar extends StatelessWidget {
     });
 
     return Container(
-      height: 100,
+      height: 104,
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: const BoxDecoration(
         color: NexusColors.surface,

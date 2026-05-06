@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/nexus_image.dart';
+import '../services/image_aspect_cache.dart';
 import '../theme.dart';
 
 class LightboxView extends StatefulWidget {
@@ -24,12 +25,14 @@ class _LightboxViewState extends State<LightboxView>
   Animation<Matrix4>? _zoomAnimation;
   TapDownDetails? _lastDoubleTapDetails;
   double? _imageAspect;
+  bool _fullResReady = false;
   ImageStream? _aspectStream;
   ImageStreamListener? _aspectListener;
 
   @override
   void initState() {
     super.initState();
+    _imageAspect = imageAspectCache[widget.image.id];
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 200),
@@ -46,8 +49,11 @@ class _LightboxViewState extends State<LightboxView>
     final stream = provider.resolve(const ImageConfiguration());
     final listener = ImageStreamListener((info, _) {
       if (!mounted) return;
+      final ratio = info.image.width / info.image.height;
+      imageAspectCache[widget.image.id] = ratio;
       setState(() {
-        _imageAspect = info.image.width / info.image.height;
+        _imageAspect = ratio;
+        _fullResReady = true;
       });
     });
     stream.addListener(listener);
@@ -127,25 +133,40 @@ class _LightboxViewState extends State<LightboxView>
                           aspectRatio: _imageAspect ?? (16 / 9),
                           child: Hero(
                             tag: 'image-${image.id}',
-                            child: CachedNetworkImage(
-                              imageUrl: image.url,
-                              fit: BoxFit.cover,
-                              fadeInDuration: Duration.zero,
-                              fadeOutDuration: Duration.zero,
-                              placeholder: (_, __) => CachedNetworkImage(
-                                imageUrl: image.thumbnailUrl,
-                                fit: BoxFit.cover,
-                                errorWidget: (_, __, ___) => const Center(
-                                  child: CircularProgressIndicator(
-                                    color: NexusColors.primary,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                CachedNetworkImage(
+                                  imageUrl: image.thumbnailUrl,
+                                  fit: BoxFit.cover,
+                                  fadeInDuration: Duration.zero,
+                                  fadeOutDuration: Duration.zero,
+                                  errorWidget: (_, __, ___) => const Center(
+                                    child: CircularProgressIndicator(
+                                      color: NexusColors.primary,
+                                    ),
                                   ),
                                 ),
-                              ),
-                              errorWidget: (_, __, ___) => Icon(
-                                PhosphorIcons.imageBroken(),
-                                color: NexusColors.textMuted,
-                                size: 64,
-                              ),
+                                AnimatedOpacity(
+                                  opacity: _fullResReady ? 1.0 : 0.0,
+                                  duration:
+                                      const Duration(milliseconds: 280),
+                                  curve: Curves.easeOut,
+                                  child: _fullResReady
+                                      ? CachedNetworkImage(
+                                          imageUrl: image.url,
+                                          fit: BoxFit.cover,
+                                          fadeInDuration: Duration.zero,
+                                          fadeOutDuration: Duration.zero,
+                                          errorWidget: (_, __, ___) => Icon(
+                                            PhosphorIcons.imageBroken(),
+                                            color: NexusColors.textMuted,
+                                            size: 64,
+                                          ),
+                                        )
+                                      : const SizedBox.shrink(),
+                                ),
+                              ],
                             ),
                           ),
                         ),

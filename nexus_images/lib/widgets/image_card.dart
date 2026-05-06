@@ -6,6 +6,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 import '../models/nexus_image.dart';
+import '../services/image_aspect_cache.dart';
 import '../theme.dart';
 
 class ImageCard extends StatefulWidget {
@@ -103,6 +104,11 @@ class _ImageCardState extends State<ImageCard> {
   }
 
   void _resolveImageAspect() {
+    final cached = imageAspectCache[widget.image.id];
+    if (cached != null) {
+      _imageAspect = cached;
+      return;
+    }
     final provider = CachedNetworkImageProvider(
       widget.image.thumbnailUrl,
       maxWidth: _decodeWidth,
@@ -110,8 +116,10 @@ class _ImageCardState extends State<ImageCard> {
     final stream = provider.resolve(const ImageConfiguration());
     final listener = ImageStreamListener((info, _) {
       if (!mounted) return;
+      final ratio = info.image.width / info.image.height;
+      imageAspectCache[widget.image.id] = ratio;
       setState(() {
-        _imageAspect = info.image.width / info.image.height;
+        _imageAspect = ratio;
       });
     });
     stream.addListener(listener);

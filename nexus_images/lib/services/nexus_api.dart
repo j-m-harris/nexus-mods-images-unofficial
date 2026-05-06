@@ -70,6 +70,7 @@ class NexusApi {
     int offset = 0,
     int count = 20,
     Map<String, Set<String>> activeFacets = const {},
+    int? randomSeed,
   }) async {
     final filter = <String, dynamic>{
       'type': [
@@ -93,7 +94,7 @@ class NexusApi {
     if (sort == SortOption.random) {
       sortVar = [
         {
-          'random': {'seed': Random().nextInt(100000)}
+          'random': {'seed': randomSeed ?? Random().nextInt(100000)}
         }
       ];
     } else {

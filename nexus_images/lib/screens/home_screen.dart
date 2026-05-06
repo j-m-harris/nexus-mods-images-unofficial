@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../models/nexus_image.dart';
@@ -38,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int? _gameId;
   SortOption _sort = SortOption.newest;
   int _perPage = 20;
+  int? _randomSeed;
 
   bool get _hasActiveSearch =>
       (_searchText != null && _searchText!.isNotEmpty) || _gameId != null;
@@ -90,6 +92,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _performSearch() async {
     final generation = ++_fetchGeneration;
+    _randomSeed =
+        _sort == SortOption.random ? Random().nextInt(100000) : null;
     setState(() {
       _loading = true;
       _error = null;
@@ -106,6 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
         offset: 0,
         count: _perPage,
         activeFacets: _activeFacets,
+        randomSeed: _randomSeed,
       );
       if (generation != _fetchGeneration || !mounted) return;
       setState(() {
@@ -137,10 +142,14 @@ class _HomeScreenState extends State<HomeScreen> {
         offset: _currentOffset,
         count: _perPage,
         activeFacets: _activeFacets,
+        randomSeed: _randomSeed,
       );
       if (generation != _fetchGeneration || !mounted) return;
+      final seenIds = _images.map((img) => img.id).toSet();
+      final newNodes =
+          result.nodes.where((img) => seenIds.add(img.id)).toList();
       setState(() {
-        _images.addAll(result.nodes);
+        _images.addAll(newNodes);
         _totalCount = result.totalCount;
         _currentOffset += result.nodes.length;
         _facets = result.facets;
