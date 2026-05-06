@@ -3,7 +3,6 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/nexus_image.dart';
 import '../theme.dart';
@@ -300,12 +299,8 @@ class _ImageCardState extends State<ImageCard> {
                   child: CachedNetworkImage(
                     imageUrl: image.thumbnailUrl,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Shimmer.fromColors(
-                      baseColor: NexusColors.imagePlaceholder,
-                      highlightColor: NexusColors.surface,
-                      period: const Duration(milliseconds: 1400),
-                      child: Container(color: NexusColors.imagePlaceholder),
-                    ),
+                    placeholder: (_, __) =>
+                        Container(color: NexusColors.imagePlaceholder),
                     errorWidget: (_, __, ___) => Container(
                       color: NexusColors.imagePlaceholder,
                       child: Icon(PhosphorIcons.imageBroken(),
