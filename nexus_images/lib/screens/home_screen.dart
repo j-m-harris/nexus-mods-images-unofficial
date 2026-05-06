@@ -383,14 +383,25 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
         elevation: 0,
       ),
-      body: IndexedStack(
-        index: _currentTab,
+      body: Stack(
         children: [
-          _buildFeed(),
-          SearchScreen(
-            games: _games,
-            onSearch: _onSearchSubmitted,
-            onCancel: () => setState(() => _currentTab = 0),
+          Offstage(
+            offstage: _currentTab != 0,
+            child: TickerMode(
+              enabled: _currentTab == 0,
+              child: _buildFeed(),
+            ),
+          ),
+          Offstage(
+            offstage: _currentTab != 1,
+            child: TickerMode(
+              enabled: _currentTab == 1,
+              child: SearchScreen(
+                games: _games,
+                onSearch: _onSearchSubmitted,
+                onCancel: () => setState(() => _currentTab = 0),
+              ),
+            ),
           ),
         ],
       ),
