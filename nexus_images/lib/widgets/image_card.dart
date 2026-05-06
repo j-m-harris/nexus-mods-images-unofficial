@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 import '../models/nexus_image.dart';
 import '../theme.dart';
 
@@ -36,14 +37,25 @@ class _ImageCardState extends State<ImageCard> {
   ImageStreamListener? _ratioListener;
   TapGestureRecognizer? _authorTap;
   TapGestureRecognizer? _gameTap;
+  bool _aspectInitialized = false;
+  int? _decodeWidth;
 
   @override
   void initState() {
     super.initState();
-    _startUpgradeTimer();
-    _resolveImageAspect();
     _bindAuthorTap();
     _bindGameTap();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final mq = MediaQuery.of(context);
+    _decodeWidth = (mq.size.width * mq.devicePixelRatio).round();
+    if (!_aspectInitialized) {
+      _aspectInitialized = true;
+      _resolveImageAspect();
+    }
   }
 
   @override
@@ -53,12 +65,12 @@ class _ImageCardState extends State<ImageCard> {
       _fullResReady = false;
       _imageAspect = null;
       _upgradeTimer?.cancel();
+      _upgradeTimer = null;
       _detachRatioListener();
       _authorTap?.dispose();
       _authorTap = null;
       _gameTap?.dispose();
       _gameTap = null;
-      _startUpgradeTimer();
       _resolveImageAspect();
       _bindAuthorTap();
       _bindGameTap();
@@ -91,7 +103,10 @@ class _ImageCardState extends State<ImageCard> {
   }
 
   void _resolveImageAspect() {
-    final provider = CachedNetworkImageProvider(widget.image.thumbnailUrl);
+    final provider = CachedNetworkImageProvider(
+      widget.image.thumbnailUrl,
+      maxWidth: _decodeWidth,
+    );
     final stream = provider.resolve(const ImageConfiguration());
     final listener = ImageStreamListener((info, _) {
       if (!mounted) return;
@@ -125,19 +140,28 @@ class _ImageCardState extends State<ImageCard> {
       _imageAspect != null && _imageAspect! > _cardAspect;
 
   void _startUpgradeTimer() {
+    if (_fullResReady) return;
+    if (_upgradeTimer != null && _upgradeTimer!.isActive) return;
     _upgradeTimer = Timer(const Duration(seconds: 2), () {
       if (!mounted) return;
-      final mq = MediaQuery.of(context);
-      final decodeWidth =
-          (mq.size.width * mq.devicePixelRatio).round();
       final provider = CachedNetworkImageProvider(
         widget.image.url,
-        maxWidth: decodeWidth,
+        maxWidth: _decodeWidth,
       );
       precacheImage(provider, context).then((_) {
         if (mounted) setState(() => _fullResReady = true);
       }).catchError((_) {});
     });
+  }
+
+  void _onVisibility(VisibilityInfo info) {
+    if (_fullResReady) return;
+    if (info.visibleFraction > 0.5) {
+      _startUpgradeTimer();
+    } else if (info.visibleFraction < 0.05) {
+      _upgradeTimer?.cancel();
+      _upgradeTimer = null;
+    }
   }
 
   @override
@@ -178,12 +202,14 @@ class _ImageCardState extends State<ImageCard> {
   @override
   Widget build(BuildContext context) {
     final image = widget.image;
-    final mq = MediaQuery.of(context);
-    final decodeWidth = (mq.size.width * mq.devicePixelRatio).round();
+    final decodeWidth = _decodeWidth;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+    return VisibilityDetector(
+      key: Key('image-card-${image.id}'),
+      onVisibilityChanged: _onVisibility,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
         // --- User header row ---
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -435,6 +461,7 @@ class _ImageCardState extends State<ImageCard> {
           ),
         Container(height: 6, color: NexusColors.imagePlaceholder),
       ],
+    ),
     );
   }
 

@@ -2,7 +2,7 @@
 
 Ranked by likely impact (highest → lowest). Not applied — captured here for follow-up.
 
-## 1. Stop the double-decode in `_resolveImageAspect`
+## 1. Stop the double-decode in `_resolveImageAspect` ✅ Done
 **File:** `lib/widgets/image_card.dart:93-105`
 
 A separate `CachedNetworkImageProvider(thumbnailUrl)` is constructed and an `ImageStreamListener` attached purely to read `info.image.width/height`. This decodes the thumbnail a second time in parallel with the visible one.
@@ -12,21 +12,21 @@ Options:
 - Read dimensions from the API response if available.
 - Drop crop-detection entirely.
 
-## 2. Bundle Inter, drop `google_fonts`
+## 2. Bundle Inter, drop `google_fonts` ✅ Done
 **File:** `lib/theme.dart:75-80`
 
 `GoogleFonts.interTextTheme` fetches font files over HTTPS on first launch and caches them in the app docs dir — adds latency, a network dependency, and an extra decoded font asset.
 
 Fix: bundle the Inter `.ttf` files under `assets/fonts/` and declare them in `pubspec.yaml`. Removes a startup network call and shrinks the dependency tree.
 
-## 3. Bound the Flutter image cache
+## 3. Bound the Flutter image cache ✅ Done
 **File:** `lib/main.dart`
 
 Nothing sets `PaintingBinding.instance.imageCache.maximumSizeBytes` (default 100MB). On a feed of 2–4MP decoded images that fills quickly.
 
 Fix: in `main.dart`, set `maximumSizeBytes` to ~50MB and `maximumSize` to ~80 entries so the cache evicts aggressively before VRAM pressure builds.
 
-## 4. Gate `_upgradeTimer` on viewport visibility
+## 4. Gate `_upgradeTimer` on viewport visibility ✅ Done
 **File:** `lib/widgets/image_card.dart:127-140`
 
 The timer fires for every card built, including off-screen ones in `CustomScrollView`'s `cacheExtent` (default 250px). Fast scrolls queue dozens of full-res precaches simultaneously.

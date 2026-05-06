@@ -3,6 +3,10 @@ import 'screens/home_screen.dart';
 import 'theme.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  PaintingBinding.instance.imageCache
+    ..maximumSizeBytes = 50 * 1024 * 1024
+    ..maximumSize = 80;
   runApp(const NexusImagesApp());
 }
 

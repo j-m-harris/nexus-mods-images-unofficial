@@ -37,8 +37,8 @@ dependencies:
   http: ^1.6.0
   cached_network_image: ^3.4.1
   url_launcher: ^6.3.2
-  google_fonts: ^8.1.0
   phosphor_flutter: ^2.1.0
+  visibility_detector: ^0.4.0+2
 
 dev_dependencies:
   flutter_test:
@@ -72,6 +72,13 @@ flutter:
 
   assets:
     - assets/icon.png
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/InterVariable.ttf
+        - asset: assets/fonts/InterVariable-Italic.ttf
+          style: italic
 
   # To add assets to your application, add an assets section, like this:
   # assets:

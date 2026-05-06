@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 /// Colors extracted from nexusmods.gif icon
 class NexusColors {
@@ -30,6 +29,7 @@ class NexusRadii {
 ThemeData nexusTheme() {
   final base = ThemeData(
     brightness: Brightness.dark,
+    fontFamily: 'Inter',
     scaffoldBackgroundColor: NexusColors.background,
     appBarTheme: const AppBarTheme(
       backgroundColor: Colors.transparent,
@@ -73,7 +73,7 @@ ThemeData nexusTheme() {
   );
 
   return base.copyWith(
-    textTheme: GoogleFonts.interTextTheme(base.textTheme).apply(
+    textTheme: base.textTheme.apply(
       bodyColor: NexusColors.textPrimary,
       displayColor: NexusColors.textPrimary,
     ),
