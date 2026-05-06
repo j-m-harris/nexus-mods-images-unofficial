@@ -130,6 +130,8 @@ class _LightboxViewState extends State<LightboxView>
                             child: CachedNetworkImage(
                               imageUrl: image.url,
                               fit: BoxFit.cover,
+                              fadeInDuration: Duration.zero,
+                              fadeOutDuration: Duration.zero,
                               placeholder: (_, __) => CachedNetworkImage(
                                 imageUrl: image.thumbnailUrl,
                                 fit: BoxFit.cover,
