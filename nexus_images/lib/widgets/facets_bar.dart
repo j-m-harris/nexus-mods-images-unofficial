@@ -133,8 +133,8 @@ class FacetsBar extends StatelessWidget {
               );
             },
           ),
-          IgnorePointer(child: _edgeFade(left: true)),
-          IgnorePointer(child: _edgeFade(left: false)),
+          _edgeFade(left: true),
+          _edgeFade(left: false),
         ],
       ),
     );
@@ -147,7 +147,7 @@ class FacetsBar extends StatelessWidget {
       left: left ? 0 : null,
       right: left ? null : 0,
       width: 24,
-      child: DecoratedBox(
+      child: IgnorePointer(child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: left ? Alignment.centerLeft : Alignment.centerRight,
@@ -158,7 +158,7 @@ class FacetsBar extends StatelessWidget {
             ],
           ),
         ),
-      ),
+      )),
     );
   }
 }

@@ -174,20 +174,9 @@ class _ImageCardState extends State<ImageCard> {
   Widget build(BuildContext context) {
     final image = widget.image;
 
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 280),
-      curve: Curves.easeOut,
-      builder: (context, value, child) => Opacity(
-        opacity: value,
-        child: Transform.translate(
-          offset: Offset(0, (1 - value) * 8),
-          child: child,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         // --- User header row ---
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -436,8 +425,7 @@ class _ImageCardState extends State<ImageCard> {
             ),
           ),
         Container(height: 6, color: NexusColors.imagePlaceholder),
-        ],
-      ),
+      ],
     );
   }
 

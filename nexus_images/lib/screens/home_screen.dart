@@ -316,15 +316,14 @@ class _HomeScreenState extends State<HomeScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: 4),
                           GestureDetector(
                             onTap: _clearSearch,
                             behavior: HitTestBehavior.opaque,
                             child: Padding(
-                              padding: const EdgeInsets.all(6),
+                              padding: const EdgeInsets.fromLTRB(4, 4, 8, 2),
                               child: Icon(
                                 PhosphorIcons.x(PhosphorIconsStyle.bold),
-                                size: 14,
+                                size: 12,
                                 color: NexusColors.textMuted,
                               ),
                             ),
