@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../models/nexus_image.dart';
 import '../theme.dart';
 
@@ -40,7 +39,7 @@ class ImageGridTile extends StatelessWidget {
                   Container(color: NexusColors.imagePlaceholder),
               errorWidget: (_, __, ___) => Container(
                 color: NexusColors.imagePlaceholder,
-                child: Icon(PhosphorIcons.imageBroken(),
+                child: Icon(Icons.broken_image_outlined,
                     color: NexusColors.textMuted),
               ),
             ),

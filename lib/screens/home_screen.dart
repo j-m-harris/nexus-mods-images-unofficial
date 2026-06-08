@@ -1,15 +1,18 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../models/nexus_image.dart';
 import '../services/nexus_api.dart';
 import '../theme.dart';
 import '../widgets/image_card.dart';
 import '../widgets/image_grid_tile.dart';
+import '../widgets/planetarium_view.dart';
 import '../widgets/facets_bar.dart';
 import '../widgets/lightbox.dart';
 import '../widgets/skeleton_card.dart';
 import 'search_screen.dart';
+
+/// The available layouts for the main listing.
+enum FeedLayout { list, grid, sphere }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static const double _navBarHeight = 48;
 
   int _currentTab = 0;
-  bool _gridView = false;
+  FeedLayout _layout = FeedLayout.list;
 
   final ScrollController _scrollController = ScrollController();
   List<NexusGame> _games = [];
@@ -333,7 +336,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: Padding(
                               padding: const EdgeInsets.fromLTRB(4, 4, 8, 2),
                               child: Icon(
-                                PhosphorIcons.x(PhosphorIconsStyle.bold),
+                                Icons.close,
                                 size: 12,
                                 color: NexusColors.textMuted,
                               ),
@@ -365,7 +368,7 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           if (_currentTab == 0)
             PopupMenuButton<SortOption>(
-              icon: Icon(PhosphorIcons.arrowsDownUp(),
+              icon: Icon(Icons.swap_vert,
                   color: NexusColors.textPrimary),
               color: NexusColors.surface,
               onSelected: (sort) {
@@ -419,6 +422,24 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  IconData get _layoutIcon {
+    switch (_layout) {
+      case FeedLayout.list:
+        return Icons.view_agenda_outlined;
+      case FeedLayout.grid:
+        return Icons.grid_view;
+      case FeedLayout.sphere:
+        return Icons.public;
+    }
+  }
+
+  void _cycleLayout() {
+    setState(() {
+      _layout = FeedLayout
+          .values[(_layout.index + 1) % FeedLayout.values.length];
+    });
+  }
+
   Widget _buildBottomNav() {
     final bottomSafe = MediaQuery.of(context).padding.bottom;
     return Container(
@@ -435,8 +456,8 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           _navButton(
             icon: _currentTab == 0
-                ? PhosphorIcons.house(PhosphorIconsStyle.fill)
-                : PhosphorIcons.house(),
+                ? Icons.home
+                : Icons.home_outlined,
             active: _currentTab == 0,
             onTap: () {
               if (_currentTab == 0) {
@@ -448,20 +469,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           _navButton(
             icon: _currentTab == 1
-                ? PhosphorIcons.magnifyingGlass(PhosphorIconsStyle.bold)
-                : PhosphorIcons.magnifyingGlass(),
+                ? Icons.search
+                : Icons.search,
             active: _currentTab == 1,
             onTap: () => setState(() => _currentTab = 1),
           ),
           _navButton(
-            icon: _gridView
-                ? PhosphorIcons.rows()
-                : PhosphorIcons.squaresFour(),
-            active: _gridView,
-            onTap: () => setState(() => _gridView = !_gridView),
+            icon: _layoutIcon,
+            active: _layout != FeedLayout.list,
+            onTap: _cycleLayout,
           ),
           _navButton(
-            icon: PhosphorIcons.arrowsClockwise(),
+            icon: Icons.refresh,
             active: false,
             onTap: _refreshFeed,
           ),
@@ -539,6 +558,17 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    if (_layout == FeedLayout.sphere) {
+      return Padding(
+        padding: EdgeInsets.only(top: topInset, bottom: bottomInset),
+        child: PlanetariumView(
+          images: _images,
+          onImageTap: _openLightbox,
+          active: _currentTab == 0,
+        ),
+      );
+    }
+
     return RefreshIndicator(
       color: NexusColors.primary,
       backgroundColor: NexusColors.surface,
@@ -558,7 +588,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onToggle: _toggleFacet,
               ),
             ),
-          if (_gridView)
+          if (_layout == FeedLayout.grid)
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 2),
               sliver: SliverGrid(

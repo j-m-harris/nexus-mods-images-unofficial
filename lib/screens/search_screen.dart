@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../models/nexus_image.dart';
 import '../services/nexus_api.dart';
 import '../theme.dart';
@@ -75,7 +74,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         color: NexusColors.textPrimary, fontSize: 14),
                     decoration: InputDecoration(
                       hintText: 'Search games...',
-                      prefixIcon: Icon(PhosphorIcons.magnifyingGlass(),
+                      prefixIcon: Icon(Icons.search,
                           color: NexusColors.textMuted, size: 20),
                     ),
                     onChanged: (val) {
@@ -102,7 +101,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         return ListTile(
                           leading: CircleAvatar(
                             backgroundColor: NexusColors.border,
-                            child: Icon(PhosphorIcons.squaresFour(),
+                            child: Icon(Icons.grid_view,
                                 color: NexusColors.textMuted, size: 18),
                           ),
                           title: const Text('All Games',
@@ -186,7 +185,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(8),
                   child: Icon(
-                    PhosphorIcons.x(PhosphorIconsStyle.bold),
+                    Icons.close,
                     size: 18,
                     color: NexusColors.textMuted,
                   ),
@@ -201,7 +200,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 const TextStyle(color: NexusColors.textPrimary, fontSize: 16),
             decoration: InputDecoration(
               hintText: 'Search images...',
-              prefixIcon: Icon(PhosphorIcons.magnifyingGlass(),
+              prefixIcon: Icon(Icons.search,
                   color: NexusColors.textMuted),
               filled: true,
               fillColor: NexusColors.surface,
@@ -232,7 +231,7 @@ class _SearchScreenState extends State<SearchScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(PhosphorIcons.gameController(),
+                  Icon(Icons.sports_esports,
                       color: NexusColors.textMuted, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
@@ -246,7 +245,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       ),
                     ),
                   ),
-                  Icon(PhosphorIcons.caretRight(),
+                  Icon(Icons.chevron_right,
                       color: NexusColors.textMuted, size: 20),
                 ],
               ),

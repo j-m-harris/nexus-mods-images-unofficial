@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/nexus_image.dart';
 import '../services/image_aspect_cache.dart';
@@ -159,7 +158,7 @@ class _LightboxViewState extends State<LightboxView>
                                           fadeInDuration: Duration.zero,
                                           fadeOutDuration: Duration.zero,
                                           errorWidget: (_, __, ___) => Icon(
-                                            PhosphorIcons.imageBroken(),
+                                            Icons.broken_image_outlined,
                                             color: NexusColors.textMuted,
                                             size: 64,
                                           ),
@@ -210,7 +209,7 @@ class _LightboxViewState extends State<LightboxView>
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
-                                    PhosphorIcons.gameController(),
+                                    Icons.sports_esports,
                                     size: 14,
                                     color: NexusColors.warmTan,
                                   ),
@@ -269,7 +268,7 @@ class _LightboxViewState extends State<LightboxView>
               top: 8,
               right: 8,
               child: IconButton(
-                icon: Icon(PhosphorIcons.x(PhosphorIconsStyle.bold),
+                icon: Icon(Icons.close,
                     color: NexusColors.textPrimary, size: 28),
                 onPressed: _closeLightbox,
               ),

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 import '../models/nexus_image.dart';
@@ -243,13 +242,13 @@ class _ImageCardState extends State<ImageCard> {
                             imageUrl: image.ownerAvatar!,
                             fit: BoxFit.cover,
                             errorWidget: (_, __, ___) => Icon(
-                              PhosphorIcons.user(PhosphorIconsStyle.fill),
+                              Icons.person,
                               color: NexusColors.textPrimary,
                               size: 14,
                             ),
                           ),
                         )
-                      : Icon(PhosphorIcons.user(PhosphorIconsStyle.fill),
+                      : Icon(Icons.person,
                           color: NexusColors.textPrimary, size: 14),
                 ),
               ),
@@ -283,7 +282,7 @@ class _ImageCardState extends State<ImageCard> {
                   ),
                 ),
               ),
-              Icon(PhosphorIcons.eye(),
+              Icon(Icons.visibility_outlined,
                   color: NexusColors.textSecondary, size: 16),
               const SizedBox(width: 4),
               Text(
@@ -292,7 +291,7 @@ class _ImageCardState extends State<ImageCard> {
                     color: NexusColors.textSecondary, fontSize: 12),
               ),
               const SizedBox(width: 10),
-              Icon(PhosphorIcons.star(),
+              Icon(Icons.star_outline,
                   color: NexusColors.textSecondary, size: 16),
               const SizedBox(width: 4),
               Text(
@@ -301,7 +300,7 @@ class _ImageCardState extends State<ImageCard> {
                     color: NexusColors.textSecondary, fontSize: 12),
               ),
               const SizedBox(width: 10),
-              Icon(PhosphorIcons.clock(),
+              Icon(Icons.schedule,
                   color: NexusColors.textSecondary, size: 16),
               const SizedBox(width: 4),
               Text(
@@ -334,7 +333,7 @@ class _ImageCardState extends State<ImageCard> {
                         Container(color: NexusColors.imagePlaceholder),
                     errorWidget: (_, __, ___) => Container(
                       color: NexusColors.imagePlaceholder,
-                      child: Icon(PhosphorIcons.imageBroken(),
+                      child: Icon(Icons.broken_image_outlined,
                           color: NexusColors.textMuted),
                     ),
                   ),
@@ -448,7 +447,7 @@ class _ImageCardState extends State<ImageCard> {
                         mode: LaunchMode.externalApplication);
                   }
                 },
-                child: Icon(PhosphorIcons.arrowSquareOut(PhosphorIconsStyle.bold),
+                child: Icon(Icons.open_in_new,
                     color: NexusColors.primary, size: 16),
               ),
             ],
