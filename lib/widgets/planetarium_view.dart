@@ -125,6 +125,20 @@ class _PlanetariumViewState extends State<PlanetariumView>
   // hysteresis, so a face near the edge of view doesn't flicker load/clear.
   static final double _loadCos = cos(70 * pi / 180);
   static final double _clearCos = cos(95 * pi / 180);
+  // Auto-glide: after this long with no input, the view eases into a slow drift
+  // in a random direction and keeps drifting until the next input stops it. The
+  // drift rate ramps from zero to [_glideSpeed] (radians/second) over
+  // [_glideEaseInMs] so it starts imperceptibly.
+  static const double _idleBeforeGlideMs = 2000;
+  static const double _glideEaseInMs = 1500;
+  static const double _glideSpeed = 0.15;
+  // While gliding, the heading re-targets every [_wanderIntervalMs] by up to
+  // ±[_wanderMaxTurn] from its current target, and eases toward that target with
+  // time constant [_wanderTurnTauMs] — so the drift wanders instead of holding a
+  // straight line, without ever turning sharply.
+  static const double _wanderIntervalMs = 2000;
+  static const double _wanderMaxTurn = pi / 3;
+  static const double _wanderTurnTauMs = 600;
 
   late final PerspectiveCamera _camera;
   final ValueNotifier<int> _repaint = ValueNotifier<int>(0);
@@ -149,6 +163,19 @@ class _PlanetariumViewState extends State<PlanetariumView>
   // pitch is clamped to ±_maxPitch.
   double _yaw = 0; // look left / right (around the vertical axis)
   double _pitch = 0; // look up / down
+
+  // Auto-glide state. [_lastInputMs] is the ticker time of the most recent
+  // input; once it's [_idleBeforeGlideMs] in the past the view drifts (eased in
+  // from [_glideStartMs]) along heading [_glideAngle] in the (yaw, pitch) plane.
+  // The heading eases toward [_glideTargetAngle], re-randomised every
+  // [_wanderIntervalMs] (tracked by [_lastWanderMs]) so the drift wanders.
+  final Random _random = Random();
+  double _lastInputMs = 0;
+  bool _gliding = false;
+  double _glideStartMs = 0;
+  double _glideAngle = 0;
+  double _glideTargetAngle = 0;
+  double _lastWanderMs = 0;
 
   @override
   void initState() {
@@ -526,14 +553,65 @@ class _PlanetariumViewState extends State<PlanetariumView>
   }
 
   void _onTick(Duration elapsed) {
+    final nowMs = elapsed.inMilliseconds.toDouble();
+    var dtMs = nowMs - _elapsed.inMilliseconds;
+    if (dtMs < 0 || dtMs > 100) dtMs = 16; // bound across restarts / hitches
     _elapsed = elapsed;
+    _updateGlide(nowMs, dtMs);
     _camera.target = _lookDirection();
     _recycle();
     final animating = _animate();
-    // Re-render when the frame changed (pan / recycle) or something is still
-    // animating; otherwise an idle, fully-loaded view skips the GPU work.
+    // Re-render when the frame changed (pan / recycle / glide) or something is
+    // still animating; otherwise an idle, fully-loaded view skips the GPU work.
     if (_dirty || animating) _repaint.value++;
     _dirty = false;
+  }
+
+  /// After [_idleBeforeGlideMs] without input, eases the view into a slow drift
+  /// whose heading wanders (re-targeted every [_wanderIntervalMs]), bouncing
+  /// gently off the pitch limit. [_registerInput] resets the timer and cancels
+  /// the drift.
+  void _updateGlide(double nowMs, double dtMs) {
+    if (nowMs - _lastInputMs < _idleBeforeGlideMs) return;
+    if (!_gliding) {
+      _gliding = true;
+      _glideStartMs = nowMs;
+      _lastWanderMs = nowMs;
+      _glideAngle = _random.nextDouble() * 2 * pi;
+      _glideTargetAngle = _glideAngle;
+    }
+    // Every interval, pick a new target heading a small random turn away from
+    // the current one, then ease the heading toward it so the turn is smooth.
+    if (nowMs - _lastWanderMs >= _wanderIntervalMs) {
+      _lastWanderMs += _wanderIntervalMs;
+      _glideTargetAngle += (_random.nextDouble() * 2 - 1) * _wanderMaxTurn;
+    }
+    _glideAngle +=
+        (_glideTargetAngle - _glideAngle) * (1 - exp(-dtMs / _wanderTurnTauMs));
+
+    // Smoothstep ease-in so the drift fades up rather than starting abruptly.
+    final e = ((nowMs - _glideStartMs) / _glideEaseInMs).clamp(0.0, 1.0);
+    final step = _glideSpeed * (e * e * (3 - 2 * e)) * (dtMs / 1000);
+    _yaw += cos(_glideAngle) * step;
+    var pitch = _pitch + sin(_glideAngle) * step;
+    if (pitch > _maxPitch) {
+      pitch = _maxPitch;
+      _glideAngle = -_glideAngle; // reflect heading (and target) off the pole
+      _glideTargetAngle = -_glideTargetAngle;
+    } else if (pitch < -_maxPitch) {
+      pitch = -_maxPitch;
+      _glideAngle = -_glideAngle;
+      _glideTargetAngle = -_glideTargetAngle;
+    }
+    _pitch = pitch;
+    _dirty = true;
+  }
+
+  /// Records an input: resets the idle timer and stops any auto-glide, so the
+  /// view holds still until the user is idle again.
+  void _registerInput() {
+    _lastInputMs = _elapsed.inMilliseconds.toDouble();
+    _gliding = false;
   }
 
   /// Drives per-face loading feedback: faces waiting for a texture pulse toward
@@ -569,6 +647,11 @@ class _PlanetariumViewState extends State<PlanetariumView>
     if (ticker == null) return;
     final shouldRun = _ready && widget.active;
     if (shouldRun && !ticker.isActive) {
+      // The ticker's elapsed clock restarts at zero, so reset the idle baseline
+      // too: a freshly shown view glides only after _idleBeforeGlideMs untouched.
+      _elapsed = Duration.zero;
+      _lastInputMs = 0;
+      _gliding = false;
       ticker.start();
     } else if (!shouldRun && ticker.isActive) {
       ticker.stop();
@@ -580,6 +663,7 @@ class _PlanetariumViewState extends State<PlanetariumView>
   vm.Vector3 _lookDirection() => _dir(_pitch, _yaw);
 
   void _onPanUpdate(DragUpdateDetails details) {
+    _registerInput();
     _yaw -= details.delta.dx * _dragSensitivity;
     _pitch = (_pitch + details.delta.dy * _dragSensitivity)
         .clamp(-_maxPitch, _maxPitch);
@@ -587,6 +671,7 @@ class _PlanetariumViewState extends State<PlanetariumView>
   }
 
   void _onTapUp(TapUpDetails details, Size size) {
+    _registerInput();
     if (_cells.isEmpty) return;
     final dir = _rayDirection(details.localPosition, size);
     // The tapped face is simply the one whose centre the ray points closest to.
@@ -636,6 +721,10 @@ class _PlanetariumViewState extends State<PlanetariumView>
           final size = Size(constraints.maxWidth, constraints.maxHeight);
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
+            // Touch-down stops any auto-glide immediately, before a tap or drag
+            // is even classified.
+            onTapDown: (_) => _registerInput(),
+            onPanDown: (_) => _registerInput(),
             onPanUpdate: _onPanUpdate,
             onTapUp: (details) => _onTapUp(details, size),
             child: CustomPaint(
