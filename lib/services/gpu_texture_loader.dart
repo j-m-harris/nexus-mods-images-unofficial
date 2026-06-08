@@ -8,16 +8,20 @@ import 'package:flutter_scene/gpu.dart' as gpu;
 
 /// Downloads [url] (reusing cached_network_image's disk/memory cache) and
 /// uploads it to a Flutter GPU texture for use as a material's
-/// `baseColorTexture`.
+/// `baseColorTexture`, along with the source image's aspect ratio (width /
+/// height) so callers can cover-crop it.
 ///
-/// The image is decoded at most [maxWidth] pixels wide to bound GPU memory —
-/// planetarium quads are small on screen, so a thumbnail-sized texture is
-/// plenty. Returns `null` if the image fails to load/decode or the GPU is
-/// unavailable, so callers can fall back to a placeholder.
-Future<gpu.Texture?> loadGpuTexture(String url, {int maxWidth = 384}) async {
+/// The image is decoded at most [maxWidth] pixels wide to bound GPU memory.
+/// Returns `null` if the image fails to load/decode or the GPU is unavailable,
+/// so callers can fall back to a placeholder.
+Future<({gpu.Texture texture, double aspect})?> loadGpuTexture(
+  String url, {
+  int maxWidth = 512,
+}) async {
   try {
     final image = await _resolveUiImage(url, maxWidth);
-    return await gpuTextureFromImage(image);
+    final texture = await gpuTextureFromImage(image);
+    return (texture: texture, aspect: image.width / image.height);
   } catch (_) {
     return null;
   }

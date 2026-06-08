@@ -664,6 +664,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: PlanetariumView(
           images: _images,
           onImageTap: _openLightbox,
+          onRequestMore: _loadNextPage,
+          canLoadMore: _currentOffset < _totalCount,
           active: _currentTab == 0,
         ),
       );
