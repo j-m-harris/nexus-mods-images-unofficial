@@ -11,6 +11,7 @@ import 'package:vector_math/vector_math.dart' as vm;
 
 import '../models/nexus_image.dart';
 import '../services/gpu_texture_loader.dart';
+import '../services/image_aspect_cache.dart';
 import '../theme.dart';
 
 /// A "planetarium" image browser: the viewer sits at the centre of a sphere and
@@ -532,23 +533,26 @@ class _PlanetariumViewState extends State<PlanetariumView>
     final image = cell.image;
     if (image == null) return;
     cell.loading = true;
-    final texture = await loadTileTexture(image.thumbnailUrl);
+    final result = await loadTileTexture(image.thumbnailUrl);
     if (!mounted) {
-      if (texture != null) releaseTileTexture(texture);
+      if (result != null) releaseTileTexture(result.texture);
       return;
     }
     // Ignore if the face was cleared / reassigned while the texture loaded.
     if (cell.image?.id != image.id) {
-      if (texture != null) releaseTileTexture(texture);
+      if (result != null) releaseTileTexture(result.texture);
       return;
     }
     cell.loading = false;
-    if (texture == null) {
+    if (result == null) {
       cell.failed = true; // don't hammer a broken URL every tick
       _setFill(cell); // stop pulsing; settle on the static fill
       return;
     }
-    cell.texture = texture;
+    // Record the real aspect so the lightbox can frame the full image without a
+    // reflow when this tile is tapped (the tile texture itself is square).
+    imageAspectCache[image.id] = result.aspect;
+    cell.texture = result.texture;
     _applyImage(cell);
   }
 

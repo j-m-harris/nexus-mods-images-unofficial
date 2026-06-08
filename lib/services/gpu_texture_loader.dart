@@ -26,14 +26,19 @@ const int _maxPooledTextures = 32;
 /// to a centred [kTileTextureSize]² square, and uploads it to a Flutter GPU
 /// texture for use as a material's `baseColorTexture`.
 ///
-/// Reuses a pooled texture when one is available (re-filled via `overwrite`),
-/// otherwise allocates a new one. Returns `null` if the image fails to
-/// load/decode or the GPU is unavailable, so callers can fall back to a
-/// placeholder. Hand a no-longer-visible texture back to [releaseTileTexture]
-/// to make it available for reuse.
-Future<gpu.Texture?> loadTileTexture(String url) async {
+/// Returns the texture together with the source image's aspect ratio (width /
+/// height) — the tile is square, but callers cache the aspect so the lightbox
+/// can frame the full image correctly without a reflow. Reuses a pooled texture
+/// when one is available (re-filled via `overwrite`), otherwise allocates a new
+/// one. Returns `null` if the image fails to load/decode or the GPU is
+/// unavailable, so callers can fall back to a placeholder. Hand a
+/// no-longer-visible texture back to [releaseTileTexture] to make it available
+/// for reuse.
+Future<({gpu.Texture texture, double aspect})?> loadTileTexture(
+    String url) async {
   try {
     final source = await _resolveUiImage(url, kTileTextureSize);
+    final aspect = source.width / source.height;
     final square = await _centreCropSquare(source, kTileTextureSize);
     try {
       // Reserve a pooled texture synchronously: the isNotEmpty check and the
@@ -49,9 +54,9 @@ Future<gpu.Texture?> loadTileTexture(String url) async {
           return null;
         }
         pooled.overwrite(bytes);
-        return pooled;
+        return (texture: pooled, aspect: aspect);
       }
-      return await gpuTextureFromImage(square);
+      return (texture: await gpuTextureFromImage(square), aspect: aspect);
     } finally {
       square.dispose();
     }

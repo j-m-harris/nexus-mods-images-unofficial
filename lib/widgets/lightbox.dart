@@ -24,7 +24,7 @@ class _LightboxViewState extends State<LightboxView>
   Animation<Matrix4>? _zoomAnimation;
   TapDownDetails? _lastDoubleTapDetails;
   double? _imageAspect;
-  bool _fullResReady = false;
+  bool _canSetState = false;
   ImageStream? _aspectStream;
   ImageStreamListener? _aspectListener;
 
@@ -40,20 +40,30 @@ class _LightboxViewState extends State<LightboxView>
           _transformController.value = _zoomAnimation!.value;
         }
       });
-    _resolveImageAspect();
+    // Frame the image by its real aspect up front. Usually already cached (the
+    // grid card and the planetarium both record it); otherwise resolve it from
+    // the thumbnail, which is the same aspect as the full image and loads from
+    // cache, so the box doesn't reflow when the full image arrives.
+    if (_imageAspect == null) _resolveThumbnailAspect();
+    _canSetState = true;
   }
 
-  void _resolveImageAspect() {
-    final provider = CachedNetworkImageProvider(widget.image.url);
+  void _resolveThumbnailAspect() {
+    final provider = CachedNetworkImageProvider(widget.image.thumbnailUrl);
     final stream = provider.resolve(const ImageConfiguration());
-    final listener = ImageStreamListener((info, _) {
-      if (!mounted) return;
+    late final ImageStreamListener listener;
+    listener = ImageStreamListener((info, _) {
       final ratio = info.image.width / info.image.height;
       imageAspectCache[widget.image.id] = ratio;
-      setState(() {
+      stream.removeListener(listener);
+      if (!mounted) return;
+      // A cached image can call back synchronously from addListener (still in
+      // initState), where setState isn't allowed yet — assign directly then.
+      if (_canSetState) {
+        setState(() => _imageAspect = ratio);
+      } else {
         _imageAspect = ratio;
-        _fullResReady = true;
-      });
+      }
     });
     stream.addListener(listener);
     _aspectStream = stream;
@@ -135,35 +145,37 @@ class _LightboxViewState extends State<LightboxView>
                             child: Stack(
                               fit: StackFit.expand,
                               children: [
+                                // Thumbnail underneath, shown whole (contain)
+                                // so no part of the image is cropped away.
                                 CachedNetworkImage(
                                   imageUrl: image.thumbnailUrl,
-                                  fit: BoxFit.cover,
+                                  fit: BoxFit.contain,
                                   fadeInDuration: Duration.zero,
                                   fadeOutDuration: Duration.zero,
-                                  errorWidget: (_, __, ___) => const Center(
+                                  placeholder: (_, _) => const Center(
                                     child: CircularProgressIndicator(
                                       color: NexusColors.primary,
                                     ),
                                   ),
+                                  errorWidget: (_, _, _) =>
+                                      const SizedBox.shrink(),
                                 ),
-                                AnimatedOpacity(
-                                  opacity: _fullResReady ? 1.0 : 0.0,
-                                  duration:
+                                // Full-res fades in on top at the exact same
+                                // framing, so it sharpens in rather than
+                                // revealing previously-cropped parts.
+                                CachedNetworkImage(
+                                  imageUrl: image.url,
+                                  fit: BoxFit.contain,
+                                  fadeInDuration:
                                       const Duration(milliseconds: 280),
-                                  curve: Curves.easeOut,
-                                  child: _fullResReady
-                                      ? CachedNetworkImage(
-                                          imageUrl: image.url,
-                                          fit: BoxFit.cover,
-                                          fadeInDuration: Duration.zero,
-                                          fadeOutDuration: Duration.zero,
-                                          errorWidget: (_, __, ___) => Icon(
-                                            Icons.broken_image_outlined,
-                                            color: NexusColors.textMuted,
-                                            size: 64,
-                                          ),
-                                        )
-                                      : const SizedBox.shrink(),
+                                  fadeInCurve: Curves.easeOut,
+                                  placeholder: (_, _) =>
+                                      const SizedBox.shrink(),
+                                  errorWidget: (_, _, _) => Icon(
+                                    Icons.broken_image_outlined,
+                                    color: NexusColors.textMuted,
+                                    size: 64,
+                                  ),
                                 ),
                               ],
                             ),
