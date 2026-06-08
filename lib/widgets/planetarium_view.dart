@@ -89,7 +89,6 @@ class _Cell {
 
   NexusImage? image;
   gpu.Texture? texture;
-  double imageAspect = 1;
   bool assigned = false;
   bool loading = false;
   bool failed = false;
@@ -194,7 +193,13 @@ class _PlanetariumViewState extends State<PlanetariumView>
   void dispose() {
     _ticker?.dispose();
     _repaint.dispose();
-    // Dropping references lets the native finalizer reclaim the GPU textures.
+    // Return live tile textures to the shared pool so a later instance (e.g.
+    // re-entering the Sphere tab) reuses them instead of reallocating. The
+    // blank texture and anything over the pool cap are left to the finalizer.
+    for (final cell in _cells) {
+      final tex = cell.texture;
+      if (tex != null) releaseTileTexture(tex);
+    }
     _cells.clear();
     _scene = null;
     _blankTexture = null;
@@ -267,7 +272,13 @@ class _PlanetariumViewState extends State<PlanetariumView>
       }
     }
 
-    // 3. One dual face per icosphere vertex.
+    // 3. One dual face per icosphere vertex. The line backings are all the same
+    //    flat colour and never change, so they're accumulated into a single
+    //    merged mesh (one draw call for the whole grid) rather than one node
+    //    each; only the image layers stay per-face, since each has its own
+    //    texture.
+    final linePositions = <double>[];
+    final lineIndices = <int>[];
     for (var vi = 0; vi < verts.length; vi++) {
       final n = verts[vi];
       // Tangent basis at the face centre, with tx pointing "up" (world +Y
@@ -287,20 +298,41 @@ class _PlanetariumViewState extends State<PlanetariumView>
       final dirs = [for (final c in corners) c.dir];
       final angles = [for (final c in corners) c.angle];
 
-      // Backing line layer: full-size, solid line colour, never changes.
-      final lineGeo = _buildFan(
-          n, dirs, _radius, 0, Float32List((dirs.length + 1) * 2));
-      scene.add(Node(
-          mesh: Mesh(lineGeo, UnlitMaterial()..baseColorFactor = _lineColor)));
+      // Backing line layer: full-size, solid line colour. Appended to the
+      // shared merged mesh (centre vertex + one per corner, fan + reverse so it
+      // isn't back-face culled from inside the sphere).
+      final base = linePositions.length ~/ 3;
+      linePositions
+          .addAll([n.x * _radius, n.y * _radius, n.z * _radius]);
+      for (final d in dirs) {
+        linePositions
+            .addAll([d.x * _radius, d.y * _radius, d.z * _radius]);
+      }
+      final k = dirs.length;
+      for (var i = 0; i < k; i++) {
+        final b = base + 1 + i, c = base + 1 + (i + 1) % k;
+        lineIndices.addAll([base, b, c, base, c, b]);
+      }
 
       // Image layer: inset and lifted toward the viewer, so the line layer peeks
       // around it as a grid line.
       final imgGeo = _buildFan(n, dirs, _radius * (1 - _tileLift), _tileInset,
-          _faceTexCoords(1, angles));
+          _faceTexCoords(angles));
       final imgMat = UnlitMaterial()..baseColorFactor = _fillColor;
       scene.add(Node(mesh: Mesh(imgGeo, imgMat)));
       _cells.add(_Cell(imgGeo, imgMat, n, angles));
     }
+
+    // The whole grid as one fixed mesh — a single draw call for all backings.
+    final linePos = Float32List.fromList(linePositions);
+    final lineGeo = MeshGeometry.fromArrays(
+      positions: linePos,
+      texCoords: Float32List(linePos.length ~/ 3 * 2),
+      indices: lineIndices,
+      storage: GeometryStorage.fixed,
+    );
+    scene.add(Node(
+        mesh: Mesh(lineGeo, UnlitMaterial()..baseColorFactor = _lineColor)));
 
     _scene = scene;
   }
@@ -358,25 +390,20 @@ class _PlanetariumViewState extends State<PlanetariumView>
   }
 
   /// Radial texture coordinates for a face's fan (centre vertex + one per
-  /// corner). The image is cropped to a centred square (so non-square images
-  /// aren't stretched) and the polygon is mapped to the inscribed circle, with
-  /// each corner placed at its own angle. `u` is mirrored because each face is
-  /// viewed from inside the sphere — i.e. from behind its front.
-  Float32List _faceTexCoords(double imageAspect, List<double> angles) {
-    var halfU = 0.5, halfV = 0.5;
-    if (imageAspect >= 1) {
-      halfU = 1 / (2 * imageAspect);
-    } else {
-      halfV = imageAspect / 2;
-    }
+  /// corner). Tile textures are already cropped to a square (see
+  /// [loadTileTexture]), so the full [0,1] image maps onto the polygon's
+  /// inscribed circle, each corner placed at its own angle. `u` is mirrored
+  /// because each face is viewed from inside the sphere — i.e. from behind its
+  /// front.
+  Float32List _faceTexCoords(List<double> angles) {
     final tex = Float32List((angles.length + 1) * 2);
     tex[0] = 0.5; // centre vertex → image centre
     tex[1] = 0.5;
     var k = 2;
     for (final a in angles) {
       // angle 0 is tangent-up → image top; mirror u for the from-behind view.
-      tex[k++] = 0.5 - halfU * sin(a);
-      tex[k++] = 0.5 - halfV * cos(a);
+      tex[k++] = 0.5 - 0.5 * sin(a);
+      tex[k++] = 0.5 - 0.5 * cos(a);
     }
     return tex;
   }
@@ -393,11 +420,12 @@ class _PlanetariumViewState extends State<PlanetariumView>
     } else {
       cell.material.baseColorFactor = _fillColor;
     }
-    cell.geometry.updateTexCoords(_faceTexCoords(1, cell.texAngles));
+    cell.geometry.updateTexCoords(_faceTexCoords(cell.texAngles));
   }
 
-  /// Applies a face's loaded image texture, cropped square so it fills the
-  /// polygon undistorted. Starts dim; [_animate] fades it up to full brightness.
+  /// Applies a face's loaded image texture (already a centred square crop, so it
+  /// fills the polygon undistorted). Starts dim; [_animate] fades it up to full
+  /// brightness.
   void _applyImage(_Cell cell) {
     _dirty = true;
     final tex = cell.texture;
@@ -409,7 +437,7 @@ class _PlanetariumViewState extends State<PlanetariumView>
       ..baseColorTexture = tex
       ..baseColorFactor = vm.Vector4(0.15, 0.15, 0.15, 1);
     cell.fadeStartMs = _elapsed.inMilliseconds.toDouble();
-    cell.geometry.updateTexCoords(_faceTexCoords(cell.imageAspect, cell.texAngles));
+    cell.geometry.updateTexCoords(_faceTexCoords(cell.texAngles));
   }
 
   /// Each tick: fill faces that have rotated into view (paging / wrapping the
@@ -459,34 +487,41 @@ class _PlanetariumViewState extends State<PlanetariumView>
     _setFill(cell); // pulses (see _animate) until the texture loads
   }
 
-  /// Frees a face's texture and unassigns it, so it pulls a fresh image the next
-  /// time it rotates into view.
+  /// Releases a face's texture (back to the pool for reuse) and unassigns it, so
+  /// it pulls a fresh image the next time it rotates into view.
   void _clear(_Cell cell) {
+    final tex = cell.texture;
     cell.assigned = false;
     cell.image = null;
     cell.texture = null;
     cell.loading = false;
     cell.failed = false;
     cell.fadeStartMs = null;
-    _setFill(cell);
+    _setFill(cell); // swaps the material to the blank texture first...
+    if (tex != null) releaseTileTexture(tex); // ...so it's safe to reuse now.
   }
 
   Future<void> _loadCellTexture(_Cell cell) async {
     final image = cell.image;
     if (image == null) return;
     cell.loading = true;
-    final result = await loadGpuTexture(image.thumbnailUrl, maxWidth: 384);
-    if (!mounted) return;
+    final texture = await loadTileTexture(image.thumbnailUrl);
+    if (!mounted) {
+      if (texture != null) releaseTileTexture(texture);
+      return;
+    }
     // Ignore if the face was cleared / reassigned while the texture loaded.
-    if (cell.image?.id != image.id) return;
+    if (cell.image?.id != image.id) {
+      if (texture != null) releaseTileTexture(texture);
+      return;
+    }
     cell.loading = false;
-    if (result == null) {
+    if (texture == null) {
       cell.failed = true; // don't hammer a broken URL every tick
       _setFill(cell); // stop pulsing; settle on the static fill
       return;
     }
-    cell.texture = result.texture;
-    cell.imageAspect = result.aspect;
+    cell.texture = texture;
     _applyImage(cell);
   }
 

@@ -6,24 +6,84 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_scene/scene.dart' show gpuTextureFromImage;
 import 'package:flutter_scene/gpu.dart' as gpu;
 
-/// Downloads [url] (reusing cached_network_image's disk/memory cache) and
-/// uploads it to a Flutter GPU texture for use as a material's
-/// `baseColorTexture`, along with the source image's aspect ratio (width /
-/// height) so callers can cover-crop it.
+/// Edge length, in pixels, of the square textures used for planetarium tiles.
+/// Every tile renders a centred square crop of its image, so all tile textures
+/// share this one size — which is exactly what lets them be pooled and reused
+/// (see [loadTileTexture] / [releaseTileTexture]).
+const int kTileTextureSize = 384;
+
+/// Freed tile textures, kept for reuse. flutter_gpu exposes no explicit
+/// texture-free call — a dropped [gpu.Texture] is reclaimed only when its
+/// native finalizer eventually runs — so allocating a fresh texture per tile
+/// lets orphans pile up and spike GPU memory under fast panning. Instead,
+/// cleared textures are returned here and later re-filled in place with
+/// `overwrite`, so the working set is recycled rather than churned. Capped so
+/// the pool itself can't grow without bound.
+final List<gpu.Texture> _texturePool = <gpu.Texture>[];
+const int _maxPooledTextures = 32;
+
+/// Downloads [url] (reusing cached_network_image's disk/memory cache), crops it
+/// to a centred [kTileTextureSize]² square, and uploads it to a Flutter GPU
+/// texture for use as a material's `baseColorTexture`.
 ///
-/// The image is decoded at most [maxWidth] pixels wide to bound GPU memory.
-/// Returns `null` if the image fails to load/decode or the GPU is unavailable,
-/// so callers can fall back to a placeholder.
-Future<({gpu.Texture texture, double aspect})?> loadGpuTexture(
-  String url, {
-  int maxWidth = 512,
-}) async {
+/// Reuses a pooled texture when one is available (re-filled via `overwrite`),
+/// otherwise allocates a new one. Returns `null` if the image fails to
+/// load/decode or the GPU is unavailable, so callers can fall back to a
+/// placeholder. Hand a no-longer-visible texture back to [releaseTileTexture]
+/// to make it available for reuse.
+Future<gpu.Texture?> loadTileTexture(String url) async {
   try {
-    final image = await _resolveUiImage(url, maxWidth);
-    final texture = await gpuTextureFromImage(image);
-    return (texture: texture, aspect: image.width / image.height);
+    final source = await _resolveUiImage(url, kTileTextureSize);
+    final square = await _centreCropSquare(source, kTileTextureSize);
+    try {
+      // Reserve a pooled texture synchronously: the isNotEmpty check and the
+      // removeLast must not straddle an `await`, or two loads running
+      // concurrently could both pass the check and the second would pop an
+      // empty pool (throwing, then surfacing as a failed/grey tile).
+      final pooled = _texturePool.isNotEmpty ? _texturePool.removeLast() : null;
+      if (pooled != null) {
+        final bytes =
+            await square.toByteData(format: ui.ImageByteFormat.rawRgba);
+        if (bytes == null) {
+          _texturePool.add(pooled); // untouched; hand it back for reuse
+          return null;
+        }
+        pooled.overwrite(bytes);
+        return pooled;
+      }
+      return await gpuTextureFromImage(square);
+    } finally {
+      square.dispose();
+    }
   } catch (_) {
     return null;
+  }
+}
+
+/// Returns a tile texture to the pool for reuse. The texture must be
+/// [kTileTextureSize]² (i.e. obtained from [loadTileTexture]) and no longer
+/// bound to a rendered material. Over-cap textures are dropped, left to the GC
+/// finalizer.
+void releaseTileTexture(gpu.Texture texture) {
+  if (_texturePool.length < _maxPooledTextures) _texturePool.add(texture);
+}
+
+/// Renders the centred maximal square of [source] into a fresh [size]² image,
+/// so a non-square source isn't stretched — the long edge is cropped.
+Future<ui.Image> _centreCropSquare(ui.Image source, int size) async {
+  final w = source.width.toDouble();
+  final h = source.height.toDouble();
+  final side = w < h ? w : h;
+  final src = Rect.fromLTWH((w - side) / 2, (h - side) / 2, side, side);
+  final dst = Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble());
+  final recorder = ui.PictureRecorder();
+  Canvas(recorder).drawImageRect(
+      source, src, dst, Paint()..filterQuality = FilterQuality.medium);
+  final picture = recorder.endRecording();
+  try {
+    return await picture.toImage(size, size);
+  } finally {
+    picture.dispose();
   }
 }
 
