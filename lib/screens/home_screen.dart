@@ -5,6 +5,7 @@ import '../models/nexus_image.dart';
 import '../services/nexus_api.dart';
 import '../theme.dart';
 import '../widgets/image_card.dart';
+import '../widgets/image_grid_tile.dart';
 import '../widgets/facets_bar.dart';
 import '../widgets/lightbox.dart';
 import '../widgets/skeleton_card.dart';
@@ -21,6 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static const double _navBarHeight = 48;
 
   int _currentTab = 0;
+  bool _gridView = false;
 
   final ScrollController _scrollController = ScrollController();
   List<NexusGame> _games = [];
@@ -452,6 +454,13 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: () => setState(() => _currentTab = 1),
           ),
           _navButton(
+            icon: _gridView
+                ? PhosphorIcons.rows()
+                : PhosphorIcons.squaresFour(),
+            active: _gridView,
+            onTap: () => setState(() => _gridView = !_gridView),
+          ),
+          _navButton(
             icon: PhosphorIcons.arrowsClockwise(),
             active: false,
             onTap: _refreshFeed,
@@ -549,17 +558,38 @@ class _HomeScreenState extends State<HomeScreen> {
                 onToggle: _toggleFacet,
               ),
             ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => ImageCard(
-                image: _images[index],
-                onTap: () => _openLightbox(_images[index]),
-                onCategoryTap: (value) => _addFacet('category', value),
-                onGameTap: _filterByGameDomain,
+          if (_gridView)
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              sliver: SliverGrid(
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 2,
+                  crossAxisSpacing: 2,
+                  childAspectRatio: 1,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => ImageGridTile(
+                    image: _images[index],
+                    onTap: () => _openLightbox(_images[index]),
+                  ),
+                  childCount: _images.length,
+                ),
               ),
-              childCount: _images.length,
+            )
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => ImageCard(
+                  image: _images[index],
+                  onTap: () => _openLightbox(_images[index]),
+                  onCategoryTap: (value) => _addFacet('category', value),
+                  onGameTap: _filterByGameDomain,
+                ),
+                childCount: _images.length,
+              ),
             ),
-          ),
           if (_loadingMore)
             const SliverToBoxAdapter(child: SkeletonCard()),
           if (_currentOffset >= _totalCount && _images.isNotEmpty)
