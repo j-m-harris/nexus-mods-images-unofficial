@@ -440,6 +440,103 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  /// Long-pressing the layout button opens a sheet listing all three views
+  /// with a short description, as an alternative to tap-to-cycle.
+  void _showLayoutMenu() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: NexusColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(NexusRadii.large)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'VIEW',
+                    style: TextStyle(
+                      color: NexusColors.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ),
+              ),
+              _layoutMenuTile(sheetContext, FeedLayout.list,
+                  Icons.view_agenda_outlined, 'List',
+                  'Full-width cards with author, stats and details'),
+              _layoutMenuTile(sheetContext, FeedLayout.grid, Icons.grid_view,
+                  'Grid', 'Compact three-column thumbnail grid'),
+              _layoutMenuTile(sheetContext, FeedLayout.sphere, Icons.public,
+                  'Sphere', '3D planetarium — drag to look around the images'),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _layoutMenuTile(
+    BuildContext sheetContext,
+    FeedLayout layout,
+    IconData icon,
+    String title,
+    String description,
+  ) {
+    final selected = _layout == layout;
+    final color = selected ? NexusColors.primary : NexusColors.textPrimary;
+    return InkWell(
+      onTap: () {
+        Navigator.of(sheetContext).pop();
+        if (_layout != layout) setState(() => _layout = layout);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: const TextStyle(
+                      color: NexusColors.textMuted,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (selected)
+              const Icon(Icons.check, color: NexusColors.primary, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildBottomNav() {
     final bottomSafe = MediaQuery.of(context).padding.bottom;
     return Container(
@@ -478,6 +575,7 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: _layoutIcon,
             active: _layout != FeedLayout.list,
             onTap: _cycleLayout,
+            onLongPress: _showLayoutMenu,
           ),
           _navButton(
             icon: Icons.refresh,
@@ -493,10 +591,12 @@ class _HomeScreenState extends State<HomeScreen> {
     required IconData icon,
     required bool active,
     required VoidCallback onTap,
+    VoidCallback? onLongPress,
   }) {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
+        onLongPress: onLongPress,
         behavior: HitTestBehavior.opaque,
         child: SizedBox(
           height: _navBarHeight,
