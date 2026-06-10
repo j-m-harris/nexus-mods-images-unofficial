@@ -617,15 +617,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final topInset = media.padding.top + kToolbarHeight;
     final bottomInset = media.padding.bottom + _navBarHeight;
 
-    if (_loading) {
-      return ListView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.only(top: topInset, bottom: bottomInset),
-        itemCount: 5,
-        itemBuilder: (_, __) => const SkeletonCard(),
-      );
-    }
-
     if (_error != null) {
       return Center(
         child: Padding(
@@ -649,7 +640,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    if (_images.isEmpty) {
+    if (_images.isEmpty && !_loading) {
       return const Center(
         child: Text(
           'No images found.',
@@ -659,6 +650,11 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (_layout == FeedLayout.sphere) {
+      // Checked before _loading so the sphere stays mounted through a refresh:
+      // unmounting it would discard the camera orientation and live tiles and
+      // flash list-style skeletons. PlanetariumView absorbs the feed swap in
+      // place (didUpdateWidget clears every cell when the feed is replaced),
+      // so an emptied-then-refilled list just recycles the tiles.
       return Padding(
         padding: EdgeInsets.only(top: topInset, bottom: bottomInset),
         child: PlanetariumView(
@@ -668,6 +664,15 @@ class _HomeScreenState extends State<HomeScreen> {
           canLoadMore: _currentOffset < _totalCount,
           active: _currentTab == 0,
         ),
+      );
+    }
+
+    if (_loading) {
+      return ListView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.only(top: topInset, bottom: bottomInset),
+        itemCount: 5,
+        itemBuilder: (_, __) => const SkeletonCard(),
       );
     }
 

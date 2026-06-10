@@ -92,7 +92,13 @@ class _Cell {
   gpu.Texture? texture;
   bool assigned = false;
   bool loading = false;
-  bool failed = false;
+  // Bumped whenever the cell's content changes (assign / clear). An in-flight
+  // texture load captures it at start and discards its result on mismatch —
+  // the image id alone can't tell "still the same assignment" from "cleared
+  // and re-assigned the same image while we loaded".
+  int loadGen = 0;
+  int failures = 0; // failed load attempts, capped by _maxLoadAttempts
+  double? retryAtMs; // ticker time before which a failed load isn't retried
   double? fadeStartMs; // when the texture was applied, for the fade-in
 }
 
@@ -121,11 +127,27 @@ class _PlanetariumViewState extends State<PlanetariumView>
   static const double _pulsePeriodMs = 900;
   static const double _pulseAmount = 0.5;
   static const Duration _fadeIn = Duration(milliseconds: 350);
-  // A face is filled once its centre comes within _loadAngle of the look
-  // direction, and cleared once it passes _clearAngle. The gap between them is
-  // hysteresis, so a face near the edge of view doesn't flicker load/clear.
-  static final double _loadCos = cos(70 * pi / 180);
-  static final double _clearCos = cos(95 * pi / 180);
+  // A failed tile load retries after a cooldown, up to a cap of attempts, so a
+  // transient network blip heals in place instead of leaving grey holes where
+  // the user is looking — while a genuinely broken URL still isn't hammered
+  // every tick. The cap resets when the face recycles or the view is re-shown.
+  static const int _maxLoadAttempts = 3;
+  static const double _retryDelayMs = 5000;
+  // A face is filled once its centre comes within the load angle of the look
+  // direction, and cleared once it passes the clear angle. Both derive from
+  // the viewport in _updateViewCones: the angle from the view axis to the
+  // viewport corner (which grows with aspect ratio — landscape sees further
+  // sideways than portrait) plus the face's own angular radius, plus a
+  // prefetch margin so tiles land just before they rotate into view. The gap
+  // between load and clear is hysteresis, so a face near the edge of view
+  // doesn't flicker load/clear. Seeded with portrait-ish values for the ticks
+  // before the first layout.
+  static const double _prefetchMargin = 10 * pi / 180;
+  static const double _clearHysteresis = 25 * pi / 180;
+  double _loadCos = cos(70 * pi / 180);
+  double _clearCos = cos(95 * pi / 180);
+  double _faceAngularRadius = 0; // widest centre-to-corner angle of any face
+  Size? _coneSize; // viewport the cones were last computed for
   // Auto-glide: after this long with no input, the view eases into a slow drift
   // in a random direction and keeps drifting until the next input stops it. The
   // drift rate ramps from zero to [_glideSpeed] (radians/second) over
@@ -152,6 +174,10 @@ class _PlanetariumViewState extends State<PlanetariumView>
   Ticker? _ticker;
   Scene? _scene;
   bool _ready = false;
+  // Flutter GPU couldn't initialise (no Vulkan on Android, emulator, very
+  // low-end hardware). The sphere can't render, so show a message instead of
+  // a silent blank view.
+  bool _gpuFailed = false;
 
   final List<_Cell> _cells = []; // every face, for iteration
   int _nextImage = 0; // next feed image to hand to a face rotating into view
@@ -196,6 +222,10 @@ class _PlanetariumViewState extends State<PlanetariumView>
       if (!mounted) return;
       setState(() => _ready = true);
       _updateTicker();
+    }).catchError((Object e) {
+      debugPrint('PlanetariumView: Flutter GPU unavailable: $e');
+      if (!mounted) return;
+      setState(() => _gpuFailed = true);
     });
   }
 
@@ -249,6 +279,7 @@ class _PlanetariumViewState extends State<PlanetariumView>
   void _buildGrid() {
     final scene = Scene();
     _cells.clear();
+    _faceAngularRadius = 0;
 
     // 1. Icosphere with shared (indexed) vertices, so we know which triangles
     //    meet at each vertex.
@@ -326,6 +357,14 @@ class _PlanetariumViewState extends State<PlanetariumView>
       final dirs = [for (final c in corners) c.dir];
       final angles = [for (final c in corners) c.angle];
 
+      // Track the widest centre-to-corner angle across all faces; the view
+      // cones (_updateViewCones) pad by it so a face whose corner pokes into
+      // the viewport is loaded even when its centre is outside.
+      for (final d in dirs) {
+        final a = acos(n.dot(d).clamp(-1.0, 1.0));
+        if (a > _faceAngularRadius) _faceAngularRadius = a;
+      }
+
       // Backing line layer: full-size, solid line colour. Appended to the
       // shared merged mesh (centre vertex + one per corner, fan + reverse so it
       // isn't back-face culled from inside the sphere).
@@ -400,13 +439,20 @@ class _PlanetariumViewState extends State<PlanetariumView>
   /// A tiny solid-white texture used to overwrite a face's image when it is
   /// cleared (tinted back to the fill colour by [baseColorFactor]).
   Future<void> _buildBlankTexture() async {
-    final px = Uint8List(2 * 2 * 4)..fillRange(0, 2 * 2 * 4, 255);
-    final image = await _decodeRgba(px, 2, 2);
-    final texture = await gpuTextureFromImage(image);
-    if (!mounted) return;
-    _blankTexture = texture;
-    for (final cell in _cells) {
-      if (cell.texture == null) _setFill(cell);
+    try {
+      final px = Uint8List(2 * 2 * 4)..fillRange(0, 2 * 2 * 4, 255);
+      final image = await _decodeRgba(px, 2, 2);
+      final texture = await gpuTextureFromImage(image);
+      if (!mounted) return;
+      _blankTexture = texture;
+      for (final cell in _cells) {
+        if (cell.texture == null) _setFill(cell);
+      }
+    } catch (e) {
+      // Non-fatal: _setFill falls back to a plain colour fill when there is no
+      // blank texture. If the GPU is missing outright, initializeStaticResources
+      // fails too and the _gpuFailed message takes over.
+      debugPrint('PlanetariumView: blank texture failed: $e');
     }
   }
 
@@ -473,6 +519,7 @@ class _PlanetariumViewState extends State<PlanetariumView>
   void _recycle() {
     final look = _lookDirection();
     final imgs = widget.images;
+    final nowMs = _elapsed.inMilliseconds.toDouble();
     var needPage = false;
     for (final cell in _cells) {
       final d = look.dot(cell.center);
@@ -496,7 +543,8 @@ class _PlanetariumViewState extends State<PlanetariumView>
         if (cell.assigned &&
             cell.texture == null &&
             !cell.loading &&
-            !cell.failed) {
+            cell.failures < _maxLoadAttempts &&
+            (cell.retryAtMs == null || nowMs >= cell.retryAtMs!)) {
           _loadCellTexture(cell);
         }
       } else if (d < _clearCos && cell.assigned) {
@@ -507,10 +555,12 @@ class _PlanetariumViewState extends State<PlanetariumView>
   }
 
   void _assignTo(_Cell cell, NexusImage image) {
+    cell.loadGen++;
     cell.image = image;
     cell.assigned = true;
     cell.loading = false;
-    cell.failed = false;
+    cell.failures = 0;
+    cell.retryAtMs = null;
     cell.fadeStartMs = null;
     _setFill(cell); // pulses (see _animate) until the texture loads
   }
@@ -519,11 +569,13 @@ class _PlanetariumViewState extends State<PlanetariumView>
   /// it pulls a fresh image the next time it rotates into view.
   void _clear(_Cell cell) {
     final tex = cell.texture;
+    cell.loadGen++;
     cell.assigned = false;
     cell.image = null;
     cell.texture = null;
     cell.loading = false;
-    cell.failed = false;
+    cell.failures = 0;
+    cell.retryAtMs = null;
     cell.fadeStartMs = null;
     _setFill(cell); // swaps the material to the blank texture first...
     if (tex != null) releaseTileTexture(tex); // ...so it's safe to reuse now.
@@ -533,20 +585,25 @@ class _PlanetariumViewState extends State<PlanetariumView>
     final image = cell.image;
     if (image == null) return;
     cell.loading = true;
+    final gen = cell.loadGen;
     final result = await loadTileTexture(image.thumbnailUrl);
     if (!mounted) {
       if (result != null) releaseTileTexture(result.texture);
       return;
     }
-    // Ignore if the face was cleared / reassigned while the texture loaded.
-    if (cell.image?.id != image.id) {
+    // Ignore if the face was cleared / reassigned while the texture loaded —
+    // even to the same image, in which case a newer load owns the cell now.
+    if (cell.loadGen != gen) {
       if (result != null) releaseTileTexture(result.texture);
       return;
     }
     cell.loading = false;
     if (result == null) {
-      cell.failed = true; // don't hammer a broken URL every tick
-      _setFill(cell); // stop pulsing; settle on the static fill
+      // Schedule a retry; after the attempt cap, _animate stops the pulse and
+      // the face settles on the static fill until it recycles.
+      cell.failures++;
+      cell.retryAtMs = _elapsed.inMilliseconds + _retryDelayMs;
+      _setFill(cell);
       return;
     }
     // Record the real aspect so the lightbox can frame the full image without a
@@ -627,7 +684,9 @@ class _PlanetariumViewState extends State<PlanetariumView>
         _pulseAmount;
     var animating = false;
     for (final cell in _cells) {
-      if (cell.assigned && cell.texture == null && !cell.failed) {
+      if (cell.assigned &&
+          cell.texture == null &&
+          cell.failures < _maxLoadAttempts) {
         // Waiting for its texture: pulse the fill toward the highlight.
         cell.material.baseColorFactor = _lerpVec(_fillColor, _pulseColor, pulse);
         animating = true;
@@ -656,6 +715,19 @@ class _PlanetariumViewState extends State<PlanetariumView>
       _elapsed = Duration.zero;
       _lastInputMs = 0;
       _gliding = false;
+      // Fade and retry timestamps belong to the old clock; against the
+      // restarted one they sit far in the future, leaving tiles stuck dim (and
+      // _animate reporting "animating" every tick) or failed tiles unable to
+      // retry. Finish in-flight fades and give failed tiles a fresh chance.
+      for (final cell in _cells) {
+        if (cell.fadeStartMs != null) {
+          cell.fadeStartMs = null;
+          cell.material.baseColorFactor = _white;
+          _dirty = true;
+        }
+        cell.retryAtMs = null;
+        cell.failures = 0;
+      }
       ticker.start();
     } else if (!shouldRun && ticker.isActive) {
       ticker.stop();
@@ -665,6 +737,24 @@ class _PlanetariumViewState extends State<PlanetariumView>
   /// World-space direction the camera is looking, from yaw/pitch. The camera
   /// sits at the origin, so this doubles as its `target`.
   vm.Vector3 _lookDirection() => _dir(_pitch, _yaw);
+
+  /// Recomputes the load/clear cones for the current viewport. The furthest
+  /// visible direction from the view axis is the viewport corner —
+  /// atan(tanY·√(1+aspect²)) for a vertical-FOV camera — so the load cone is
+  /// that, padded by the face radius (a corner can show before the centre)
+  /// and the prefetch margin. Cheap, and only runs when the size changes
+  /// (first layout, rotation, resize).
+  void _updateViewCones(Size size) {
+    if (size == _coneSize || size.isEmpty) return;
+    _coneSize = size;
+    final aspect = size.width / size.height;
+    final tanY = tan(_fovRadians / 2);
+    final cornerAngle = atan(tanY * sqrt(1 + aspect * aspect));
+    final loadAngle =
+        min(cornerAngle + _faceAngularRadius + _prefetchMargin, pi / 2);
+    _loadCos = cos(loadAngle);
+    _clearCos = cos(loadAngle + _clearHysteresis);
+  }
 
   void _onPanUpdate(DragUpdateDetails details) {
     _registerInput();
@@ -717,12 +807,29 @@ class _PlanetariumViewState extends State<PlanetariumView>
 
   @override
   Widget build(BuildContext context) {
+    if (_gpuFailed) {
+      return const ColoredBox(
+        color: NexusColors.background,
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(32),
+            child: Text(
+              'The 3D view isn\'t available on this device.\n'
+              'Tap the layout button to switch to list or grid.',
+              style: TextStyle(color: NexusColors.textMuted, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
     final scene = _scene;
     return ColoredBox(
       color: NexusColors.background,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final size = Size(constraints.maxWidth, constraints.maxHeight);
+          _updateViewCones(size);
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
             // Touch-down stops any auto-glide immediately, before a tap or drag

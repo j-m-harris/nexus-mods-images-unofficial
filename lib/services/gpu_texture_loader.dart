@@ -37,9 +37,17 @@ const int _maxPooledTextures = 32;
 Future<({gpu.Texture texture, double aspect})?> loadTileTexture(
     String url) async {
   try {
-    final source = await _resolveUiImage(url, kTileTextureSize);
-    final aspect = source.width / source.height;
-    final square = await _centreCropSquare(source, kTileTextureSize);
+    final info = await _resolveUiImage(url, kTileTextureSize);
+    final double aspect;
+    final ui.Image square;
+    // Crop before disposing: the crop reads the image, and the image cache may
+    // hold the only other handle on it.
+    try {
+      aspect = info.image.width / info.image.height;
+      square = await _centreCropSquare(info.image, kTileTextureSize);
+    } finally {
+      info.dispose();
+    }
     try {
       // Reserve a pooled texture synchronously: the isNotEmpty check and the
       // removeLast must not straddle an `await`, or two loads running
@@ -47,14 +55,22 @@ Future<({gpu.Texture texture, double aspect})?> loadTileTexture(
       // empty pool (throwing, then surfacing as a failed/grey tile).
       final pooled = _texturePool.isNotEmpty ? _texturePool.removeLast() : null;
       if (pooled != null) {
-        final bytes =
-            await square.toByteData(format: ui.ImageByteFormat.rawRgba);
-        if (bytes == null) {
-          _texturePool.add(pooled); // untouched; hand it back for reuse
-          return null;
+        try {
+          final bytes =
+              await square.toByteData(format: ui.ImageByteFormat.rawRgba);
+          if (bytes == null) {
+            _texturePool.add(pooled); // untouched; hand it back for reuse
+            return null;
+          }
+          pooled.overwrite(bytes);
+          return (texture: pooled, aspect: aspect);
+        } catch (_) {
+          // Re-pool the reserved texture before the outer catch swallows the
+          // error, or it's orphaned to the GC — the churn the pool exists to
+          // prevent. Its contents don't matter; the next reuse overwrites it.
+          releaseTileTexture(pooled);
+          rethrow;
         }
-        pooled.overwrite(bytes);
-        return (texture: pooled, aspect: aspect);
       }
       return (texture: await gpuTextureFromImage(square), aspect: aspect);
     } finally {
@@ -92,17 +108,23 @@ Future<ui.Image> _centreCropSquare(ui.Image source, int size) async {
   }
 }
 
-/// Resolves a network image to a decoded [ui.Image] via the shared
-/// cached_network_image cache (same provider the cards use).
-Future<ui.Image> _resolveUiImage(String url, int maxWidth) {
-  final completer = Completer<ui.Image>();
+/// Resolves a network image to a decoded image via the shared
+/// cached_network_image cache (same provider the cards use). The caller owns
+/// the returned [ImageInfo] and must dispose it, or its handle keeps the
+/// decoded image alive even after the image cache evicts it.
+Future<ImageInfo> _resolveUiImage(String url, int maxWidth) {
+  final completer = Completer<ImageInfo>();
   final provider = CachedNetworkImageProvider(url, maxWidth: maxWidth);
   final stream = provider.resolve(const ImageConfiguration());
   late final ImageStreamListener listener;
   listener = ImageStreamListener(
     (info, _) {
       stream.removeListener(listener);
-      if (!completer.isCompleted) completer.complete(info.image);
+      if (!completer.isCompleted) {
+        completer.complete(info);
+      } else {
+        info.dispose();
+      }
     },
     onError: (error, stack) {
       stream.removeListener(listener);

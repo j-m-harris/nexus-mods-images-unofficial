@@ -114,8 +114,9 @@ class _ImageCardState extends State<ImageCard> {
     );
     final stream = provider.resolve(const ImageConfiguration());
     final listener = ImageStreamListener((info, _) {
-      if (!mounted) return;
       final ratio = info.image.width / info.image.height;
+      info.dispose(); // only the dimensions are needed
+      if (!mounted) return;
       imageAspectCache[widget.image.id] = ratio;
       setState(() {
         _imageAspect = ratio;

@@ -54,6 +54,7 @@ class _LightboxViewState extends State<LightboxView>
     late final ImageStreamListener listener;
     listener = ImageStreamListener((info, _) {
       final ratio = info.image.width / info.image.height;
+      info.dispose(); // only the dimensions are needed
       imageAspectCache[widget.image.id] = ratio;
       stream.removeListener(listener);
       if (!mounted) return;
