@@ -643,8 +643,12 @@ class _PlanetariumViewState extends State<PlanetariumView>
     }
     // Every interval, pick a new target heading a small random turn away from
     // the current one, then ease the heading toward it so the turn is smooth.
+    // Resync (rather than increment) the stamp: ticks pause while the screen
+    // is off, and on wake the backlog would otherwise re-fire this every tick
+    // until it caught up — one random turn per frame, an erratic drift for
+    // sleep÷120 of real time. Missed turns can simply be skipped.
     if (nowMs - _lastWanderMs >= _wanderIntervalMs) {
-      _lastWanderMs += _wanderIntervalMs;
+      _lastWanderMs = nowMs;
       _glideTargetAngle += (_random.nextDouble() * 2 - 1) * _wanderMaxTurn;
     }
     _glideAngle +=
