@@ -5,6 +5,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-06-10
+
+### Fixed
+
+- Planetarium tiles no longer come back dim (with the GPU repainting
+  needlessly) after switching tabs mid-fade.
+- Fixed a memory leak that kept a decoded thumbnail alive for every
+  planetarium tile load and aspect-ratio lookup.
+- Devices without Flutter GPU support now see a clear message on the Sphere
+  tab instead of a silently blank view.
+- Failed tile loads now retry a few times with a cooldown instead of leaving
+  permanent grey tiles in view.
+- The planetarium's load region now follows the actual viewport, so screen
+  corners fill correctly in landscape.
+- Fixed texture-pool races that could orphan GPU textures or visibly restart
+  a tile's fade-in.
+- Refreshing while on the Sphere tab keeps the view mounted — no more
+  skeleton flash or camera reset.
+
 ## [1.1.0] - 2026-06-08
 
 ### Added
