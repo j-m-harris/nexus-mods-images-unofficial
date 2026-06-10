@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-06-10
+
+### Changed
+
+- API requests now time out and retry transient failures (HTTP 429 and 5xx
+  server errors) with exponential backoff, honouring a `Retry-After` header
+  when present, instead of surfacing the error immediately.
+
 ## [1.1.2] - 2026-06-10
 
 ### Fixed
