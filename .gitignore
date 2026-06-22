@@ -49,3 +49,6 @@ app.*.map.json
 
 # Claude Code per-developer settings
 .claude/settings.local.json
+
+# Generated app screenshots (see .claude/skills/generate-screenshots)
+/screenshots
