@@ -78,6 +78,15 @@ class FavouritesService extends ChangeNotifier {
     await _persist();
   }
 
+  /// Removes every favourite. No-op if already empty.
+  Future<void> clear() async {
+    if (_favourites.isEmpty) return;
+    _favourites.clear();
+    _ids.clear();
+    notifyListeners();
+    await _persist();
+  }
+
   /// Adds [image] if absent, removes it if present. Returns the new state
   /// (`true` = now a favourite).
   Future<bool> toggle(NexusImage image) async {

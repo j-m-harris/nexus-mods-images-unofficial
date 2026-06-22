@@ -11,8 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Local favourites: save any image to an on-device gallery from the lightbox
   (tap **Save**), browse saved images in the new **Favourites** tab (newest
-  first), and remove one from the favourites lightbox via a confirmable
-  **Remove from favourites** action. Favourites persist across app restarts.
+  first, in your choice of list, grid or planetarium layout), and remove one
+  from the favourites lightbox via a confirmable **Remove from favourites**
+  action. Favourites persist across app restarts.
 
 ## [1.1.4] - 2026-06-22
 

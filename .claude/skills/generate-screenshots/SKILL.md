@@ -69,6 +69,7 @@ Work through the set **in this order**:
 | 05 | `05-search.png` | **Search menu** | Dismiss the view menu (tap outside / back), then tap the **Search** nav button. |
 | 06 | `06-game-picker.png` | **Game search filter** — the list of available games | In the search screen, tap the **game filter** control to open the game picker sheet; capture with the games list showing. |
 | 07 | `07-lightbox.png` | **Lightbox** — full-screen image detail view | Return to the feed (Home nav button). Tap a **random** feed image to open the lightbox; capture with the image and its info panel showing. |
+| 08 | `08-favourites-grid.png` | **Favourites view** (grid layout) with saved images | Save a few images first: from the feed grid, open a tile → tap **Save** in the lightbox → close; repeat for 3–4 images. Then tap the **Favourites** (heart) nav button. Ensure the layout is **grid** (cycle the layout button to the grid icon if needed). Capture with the saved thumbnails and the "Favourites" subheader showing. |
 
 ### 3. Finish
 
@@ -77,20 +78,21 @@ Work through the set **in this order**:
 
 ## Coordinates
 
-The bottom nav is a single row of **4 equal-width** buttons (Home, Search,
-**Layout toggle**, Refresh), each occupying ¼ of the width. Button centres for a
-1080-wide screen:
+The bottom nav is a single row of **5 equal-width** buttons (Home, Search,
+**Favourites**, **Layout toggle**, Refresh), each occupying ⅕ of the width.
+Button centres for a 1080-wide screen:
 
 | Button | Center X |
 |--------|----------|
-| Home | 135 |
-| Search | 405 |
-| **Layout toggle** | **675** |
-| Refresh | 945 |
+| Home | 108 |
+| Search | 324 |
+| **Favourites** | **540** |
+| **Layout toggle** | **756** |
+| Refresh | 972 |
 
 The nav row sits at the bottom; tap **Y ≈ 2330** for 2400-tall (≈ 97% of
-height). For other sizes, derive: `X_center = width * (buttonIndex*2+1)/8`,
-`Y ≈ height * 0.97`.
+height). For other sizes, derive: `X_center = width * (buttonIndex*2+1)/10`,
+`Y ≈ height * 0.97` (buttonIndex 0–4).
 
 The **game filter** control and the view/search sheets are laid out
 dynamically — locate them on the captured frame (or via the visible labels)

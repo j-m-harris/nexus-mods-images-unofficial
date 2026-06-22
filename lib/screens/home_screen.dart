@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../models/feed_layout.dart';
 import '../models/nexus_image.dart';
 import '../services/nexus_api.dart';
 import '../theme.dart';
@@ -11,9 +12,6 @@ import '../widgets/lightbox.dart';
 import '../widgets/skeleton_card.dart';
 import 'favourites_screen.dart';
 import 'search_screen.dart';
-
-/// The available layouts for the main listing.
-enum FeedLayout { list, grid, sphere }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -441,8 +439,9 @@ class _HomeScreenState extends State<HomeScreen> {
               enabled: _currentTab == 2,
               child: HeroMode(
                 enabled: _currentTab == 2,
-                child: const FavouritesScreen(
-                  bottomNavHeight: _navBarHeight,
+                child: FavouritesScreen(
+                  layout: _layout,
+                  active: _currentTab == 2,
                 ),
               ),
             ),
