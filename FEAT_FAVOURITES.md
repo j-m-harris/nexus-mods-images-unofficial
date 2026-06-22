@@ -4,7 +4,7 @@ Save images to a local, on-device gallery ("favourites"), browse them in a
 dedicated view, and remove them — with a confirmation step when removing from
 within the favourites lightbox.
 
-Status: **Phase 2 complete (save from lightbox)**
+Status: **Phase 3 complete (favourites view)**
 Target version: 1.2.0 (minor — new user-facing feature)
 
 ## Requirements
@@ -68,10 +68,15 @@ Target version: 1.2.0 (minor — new user-facing feature)
 - [x] Wire feed → lightbox to pass `fromFavourites: false` (explicit at the
       call site in `_openLightbox`).
 
-### Phase 3 — Favourites view
-- [ ] Create `FavouritesScreen` (reuse grid/card widgets); empty state.
-- [ ] Add favourites tab to bottom nav + `Offstage`/`TickerMode` body block.
-- [ ] Open lightbox from this screen with `fromFavourites: true`.
+### Phase 3 — Favourites view ✅
+- [x] Create `FavouritesScreen` (reuses `ImageGridTile`; newest-first grid via
+      `ListenableBuilder` on the service); empty state with prompt.
+- [x] Add favourites tab to bottom nav (heart, between Search and Layout) +
+      `Offstage`/`TickerMode` body block (tab index 2).
+- [x] Open lightbox from this screen with `fromFavourites: true`.
+- Note: wrapped the feed and favourites tabs in `HeroMode(enabled: active)` so
+  only the visible tab registers `image-<id>` Heroes — without it the two grids
+  would throw a duplicate-hero-tag error for any image saved while also in feed.
 
 ### Phase 4 — Confirmable removal
 - [ ] In the lightbox when `fromFavourites == true`, show **Remove from
@@ -108,3 +113,7 @@ Target version: 1.2.0 (minor — new user-facing feature)
   save/unsave heart toggle (live via `ListenableBuilder` on the service); feed
   opens the lightbox with `fromFavourites: false`. `flutter analyze` clean
   (only pre-existing `unnecessary_underscores` lints remain).
+- 2026-06-22 — Phase 3 done. New `FavouritesScreen` (newest-first grid + empty
+  state), favourites bottom-nav tab (index 2), opens lightbox with
+  `fromFavourites: true`. Added `HeroMode` guard around feed/favourites tabs to
+  avoid duplicate hero tags. No analyze errors.

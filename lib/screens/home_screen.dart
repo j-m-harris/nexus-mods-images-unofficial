@@ -9,6 +9,7 @@ import '../widgets/planetarium_view.dart';
 import '../widgets/facets_bar.dart';
 import '../widgets/lightbox.dart';
 import '../widgets/skeleton_card.dart';
+import 'favourites_screen.dart';
 import 'search_screen.dart';
 
 /// The available layouts for the main listing.
@@ -415,7 +416,12 @@ class _HomeScreenState extends State<HomeScreen> {
             offstage: _currentTab != 0,
             child: TickerMode(
               enabled: _currentTab == 0,
-              child: _buildFeed(),
+              // Only the visible tab contributes Heroes; otherwise the feed and
+              // favourites grids would register duplicate `image-<id>` tags.
+              child: HeroMode(
+                enabled: _currentTab == 0,
+                child: _buildFeed(),
+              ),
             ),
           ),
           Offstage(
@@ -426,6 +432,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 games: _games,
                 onSearch: _onSearchSubmitted,
                 onCancel: () => setState(() => _currentTab = 0),
+              ),
+            ),
+          ),
+          Offstage(
+            offstage: _currentTab != 2,
+            child: TickerMode(
+              enabled: _currentTab == 2,
+              child: HeroMode(
+                enabled: _currentTab == 2,
+                child: const FavouritesScreen(
+                  bottomNavHeight: _navBarHeight,
+                ),
               ),
             ),
           ),
@@ -587,6 +605,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 : Icons.search,
             active: _currentTab == 1,
             onTap: () => setState(() => _currentTab = 1),
+          ),
+          _navButton(
+            icon: _currentTab == 2
+                ? Icons.favorite
+                : Icons.favorite_border,
+            active: _currentTab == 2,
+            onTap: () => setState(() => _currentTab = 2),
           ),
           _navButton(
             icon: _layoutIcon,
