@@ -62,6 +62,33 @@ class NexusImage {
     );
   }
 
+  /// Serialises to the same nested shape [NexusImage.fromJson] consumes, so a
+  /// value survives a `fromJson(toJson(x))` round-trip unchanged. Used to
+  /// persist favourites locally.
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'title': title,
+      'caption': caption,
+      'description': description,
+      'url': url,
+      'thumbnailUrl': thumbnailUrl,
+      'views': views,
+      'rating': rating,
+      'createdAt': createdAt,
+      'siteUrl': siteUrl,
+      'category': {'name': categoryName},
+      'game': {'name': gameName, 'domainName': gameDomain},
+      'owner': {
+        'name': ownerName,
+        'avatar': ownerAvatar,
+        'memberId': ownerMemberId,
+      },
+      'adult': adult,
+    };
+  }
+
   String get displayTitle {
     if (title != null && title!.isNotEmpty) return title!;
     if (caption != null && caption!.isNotEmpty) return caption!;

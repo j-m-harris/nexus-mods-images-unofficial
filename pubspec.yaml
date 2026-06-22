@@ -38,6 +38,7 @@ dependencies:
   cached_network_image: ^3.4.1
   url_launcher: ^6.3.2
   visibility_detector: ^0.4.0+2
+  shared_preferences: ^2.2.0
   flutter_scene: ^0.16.0
   flutter_gpu:
     sdk: flutter
