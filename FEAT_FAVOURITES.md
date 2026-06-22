@@ -4,7 +4,7 @@ Save images to a local, on-device gallery ("favourites"), browse them in a
 dedicated view, and remove them — with a confirmation step when removing from
 within the favourites lightbox.
 
-Status: **Phase 4 complete (confirmable removal) — feature functionally done; Phase 5 polish/release pending**
+Status: **Complete — shipped in 1.2.0 (all phases done)**
 Target version: 1.2.0 (minor — new user-facing feature)
 
 ## Requirements
@@ -86,10 +86,12 @@ Target version: 1.2.0 (minor — new user-facing feature)
 - [x] feed/favourites views update live via the listener (`ListenableBuilder`
       in `FavouritesScreen` + the save toggle rebuild).
 
-### Phase 5 — Polish & release
-- [ ] Verify cross-view sync (save in feed → appears in favourites instantly).
-- [ ] `flutter analyze` clean; manual run-through of save → browse → remove.
-- [ ] Bump to 1.2.0, update `CHANGELOG.md`, commit.
+### Phase 5 — Polish & release ✅
+- [x] Verify cross-view sync (save in feed → appears in favourites instantly).
+- [x] `flutter analyze` clean (no errors/warnings); round-trip test passing;
+      manual run-through on emulator of save → browse → confirm-remove →
+      empty state, all confirmed working.
+- [x] Bump to 1.2.0 (+18), update `CHANGELOG.md`, commit.
 
 ## Resolved decisions
 
@@ -123,3 +125,7 @@ Target version: 1.2.0 (minor — new user-facing feature)
   confirmable "Remove from favourites" (AlertDialog → remove → pop to grid).
   `lightbox.dart` analyze clean. Feature is functionally complete end-to-end;
   only Phase 5 (verify + release) remains.
+- 2026-06-22 — Phase 5 done. Verified the full save → browse → confirm-remove →
+  empty-state flow live on the Android emulator. analyze clean (no
+  errors/warnings), round-trip test passing. Bumped to 1.2.0 (+18) and added the
+  CHANGELOG entry. Feature shipped.
