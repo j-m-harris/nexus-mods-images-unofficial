@@ -4,7 +4,7 @@ Save images to a local, on-device gallery ("favourites"), browse them in a
 dedicated view, and remove them — with a confirmation step when removing from
 within the favourites lightbox.
 
-Status: **Phase 3 complete (favourites view)**
+Status: **Phase 4 complete (confirmable removal) — feature functionally done; Phase 5 polish/release pending**
 Target version: 1.2.0 (minor — new user-facing feature)
 
 ## Requirements
@@ -78,11 +78,13 @@ Target version: 1.2.0 (minor — new user-facing feature)
   only the visible tab registers `image-<id>` Heroes — without it the two grids
   would throw a duplicate-hero-tag error for any image saved while also in feed.
 
-### Phase 4 — Confirmable removal
-- [ ] In the lightbox when `fromFavourites == true`, show **Remove from
-      favourites** action.
-- [ ] Show a confirmation dialog; on confirm, remove via service and pop/refresh.
-- [ ] Ensure feed/favourites views update live via the listener.
+### Phase 4 — Confirmable removal ✅
+- [x] In the lightbox when `fromFavourites == true`, show **Remove from
+      favourites** action (filled heart).
+- [x] Show a confirmation dialog (Cancel / Remove); on confirm, remove via
+      service and pop the lightbox back to the grid.
+- [x] feed/favourites views update live via the listener (`ListenableBuilder`
+      in `FavouritesScreen` + the save toggle rebuild).
 
 ### Phase 5 — Polish & release
 - [ ] Verify cross-view sync (save in feed → appears in favourites instantly).
@@ -117,3 +119,7 @@ Target version: 1.2.0 (minor — new user-facing feature)
   state), favourites bottom-nav tab (index 2), opens lightbox with
   `fromFavourites: true`. Added `HeroMode` guard around feed/favourites tabs to
   avoid duplicate hero tags. No analyze errors.
+- 2026-06-22 — Phase 4 done. Lightbox in `fromFavourites` mode shows a
+  confirmable "Remove from favourites" (AlertDialog → remove → pop to grid).
+  `lightbox.dart` analyze clean. Feature is functionally complete end-to-end;
+  only Phase 5 (verify + release) remains.

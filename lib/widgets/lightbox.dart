@@ -321,43 +321,98 @@ class _LightboxViewState extends State<LightboxView>
     return buf.toString();
   }
 
-  /// Save/unsave toggle, rebuilt live from [FavouritesService] so its state
-  /// stays in sync if the same image is (un)favourited elsewhere.
+  /// The favourite action. From the favourites view it is a confirmable
+  /// "Remove from favourites"; from the feed it is a save/unsave toggle that
+  /// rebuilds live from [FavouritesService] so its state stays in sync if the
+  /// same image is (un)favourited elsewhere.
   Widget _favouriteButton() {
+    if (widget.fromFavourites) {
+      return _favouriteAction(
+        icon: Icons.favorite,
+        label: 'Remove from favourites',
+        onTap: _confirmRemoveFavourite,
+      );
+    }
     final favourites = FavouritesService.instance;
     return ListenableBuilder(
       listenable: favourites,
       builder: (context, _) {
         final saved = favourites.isFavourite(widget.image.id);
-        return GestureDetector(
+        return _favouriteAction(
+          icon: saved ? Icons.favorite : Icons.favorite_border,
+          label: saved ? 'Saved' : 'Save',
           onTap: _toggleFavourite,
-          behavior: HitTestBehavior.opaque,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                saved ? Icons.favorite : Icons.favorite_border,
-                size: 18,
-                color: NexusColors.primary,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                saved ? 'Saved' : 'Save',
-                style: const TextStyle(
-                  color: NexusColors.primary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
         );
       },
     );
   }
 
+  Widget _favouriteAction({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: NexusColors.primary),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: NexusColors.primary,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _toggleFavourite() async {
     await FavouritesService.instance.toggle(widget.image);
+  }
+
+  /// Confirms before removing, then removes and closes the lightbox so the user
+  /// returns to the favourites grid (the listener drops the image from it).
+  Future<void> _confirmRemoveFavourite() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: NexusColors.surface,
+        title: const Text(
+          'Remove from favourites?',
+          style: TextStyle(color: NexusColors.textPrimary),
+        ),
+        content: const Text(
+          'This image will be removed from your local favourites.',
+          style: TextStyle(color: NexusColors.textMuted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: NexusColors.textMuted),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text(
+              'Remove',
+              style: TextStyle(color: NexusColors.primary),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await FavouritesService.instance.remove(widget.image.id);
+    if (mounted) Navigator.of(context).pop();
   }
 
   Widget _linkButton(String label, String url) {
