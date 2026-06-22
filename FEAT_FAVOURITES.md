@@ -4,7 +4,7 @@ Save images to a local, on-device gallery ("favourites"), browse them in a
 dedicated view, and remove them — with a confirmation step when removing from
 within the favourites lightbox.
 
-Status: **Phase 1 complete (persistence foundation)**
+Status: **Phase 2 complete (save from lightbox)**
 Target version: 1.2.0 (minor — new user-facing feature)
 
 ## Requirements
@@ -59,11 +59,14 @@ Target version: 1.2.0 (minor — new user-facing feature)
       notifyListeners). JSON list under key `favourites.v1`, newest-first.
 - [x] Initialise the service at startup (`await ...init()` in `main`).
 
-### Phase 2 — Save from lightbox
-- [ ] Add `fromFavourites` param to `LightboxView` (default `false`).
-- [ ] Add a save/unsave toggle button to the lightbox action area; reflect
-      current state via the service listener.
-- [ ] Wire feed → lightbox to pass `fromFavourites: false`.
+### Phase 2 — Save from lightbox ✅
+- [x] Add `fromFavourites` param to `LightboxView` (default `false`).
+- [x] Add a save/unsave toggle button to the lightbox action area; reflect
+      current state via the service listener. (Heart icon + Save/Saved label,
+      wrapped in `ListenableBuilder` on `FavouritesService`, in the bottom panel
+      actions row beside "View on Nexus Mods".)
+- [x] Wire feed → lightbox to pass `fromFavourites: false` (explicit at the
+      call site in `_openLightbox`).
 
 ### Phase 3 — Favourites view
 - [ ] Create `FavouritesScreen` (reuse grid/card widgets); empty state.
@@ -101,3 +104,7 @@ Target version: 1.2.0 (minor — new user-facing feature)
   (nested, inverse of `fromJson`), `FavouritesService` (ChangeNotifier
   singleton, newest-first, key `favourites.v1`), startup init in `main`.
   `flutter analyze` clean; round-trip test passing.
+- 2026-06-22 — Phase 2 done. `LightboxView` gains `fromFavourites` flag and a
+  save/unsave heart toggle (live via `ListenableBuilder` on the service); feed
+  opens the lightbox with `fromFavourites: false`. `flutter analyze` clean
+  (only pre-existing `unnecessary_underscores` lints remain).

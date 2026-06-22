@@ -210,7 +210,8 @@ class _HomeScreenState extends State<HomeScreen> {
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 240),
         reverseTransitionDuration: const Duration(milliseconds: 220),
-        pageBuilder: (_, __, ___) => LightboxView(image: image),
+        pageBuilder: (_, __, ___) =>
+            LightboxView(image: image, fromFavourites: false),
         transitionsBuilder: (_, animation, __, child) =>
             FadeTransition(opacity: animation, child: child),
       ),

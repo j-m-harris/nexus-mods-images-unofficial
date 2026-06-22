@@ -2,13 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/nexus_image.dart';
+import '../services/favourites_service.dart';
 import '../services/image_aspect_cache.dart';
 import '../theme.dart';
 
 class LightboxView extends StatefulWidget {
   final NexusImage image;
 
-  const LightboxView({super.key, required this.image});
+  /// Whether this lightbox was opened from the favourites view. When true, the
+  /// favourite action becomes a confirmable "Remove from favourites" (Phase 4);
+  /// from the feed it is a plain save/unsave toggle.
+  final bool fromFavourites;
+
+  const LightboxView({
+    super.key,
+    required this.image,
+    this.fromFavourites = false,
+  });
 
   @override
   State<LightboxView> createState() => _LightboxViewState();
@@ -268,10 +278,18 @@ class _LightboxViewState extends State<LightboxView>
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
-                      if (image.siteUrl != null) ...[
-                        const SizedBox(height: 10),
-                        _linkButton('View on Nexus Mods', image.siteUrl!),
-                      ],
+                      const SizedBox(height: 12),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 20,
+                        runSpacing: 8,
+                        children: [
+                          _favouriteButton(),
+                          if (image.siteUrl != null)
+                            _linkButton('View on Nexus Mods', image.siteUrl!),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -301,6 +319,45 @@ class _LightboxViewState extends State<LightboxView>
       buf.write(s[i]);
     }
     return buf.toString();
+  }
+
+  /// Save/unsave toggle, rebuilt live from [FavouritesService] so its state
+  /// stays in sync if the same image is (un)favourited elsewhere.
+  Widget _favouriteButton() {
+    final favourites = FavouritesService.instance;
+    return ListenableBuilder(
+      listenable: favourites,
+      builder: (context, _) {
+        final saved = favourites.isFavourite(widget.image.id);
+        return GestureDetector(
+          onTap: _toggleFavourite,
+          behavior: HitTestBehavior.opaque,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                saved ? Icons.favorite : Icons.favorite_border,
+                size: 18,
+                color: NexusColors.primary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                saved ? 'Saved' : 'Save',
+                style: const TextStyle(
+                  color: NexusColors.primary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _toggleFavourite() async {
+    await FavouritesService.instance.toggle(widget.image);
   }
 
   Widget _linkButton(String label, String url) {
