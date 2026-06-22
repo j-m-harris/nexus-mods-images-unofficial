@@ -88,11 +88,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onScroll() {
     if (_loadingMore || _currentOffset >= _totalCount) return;
+    if (!_scrollController.hasClients) return;
     final maxScroll = _scrollController.position.maxScrollExtent;
     final currentScroll = _scrollController.position.pixels;
     if (currentScroll >= maxScroll - 600) {
       _loadNextPage();
     }
+  }
+
+  /// Re-evaluates the load-more condition after the feed rebuilds. Switching
+  /// layouts changes the scroll extent (the grid is denser than the list), so
+  /// the current position may land inside the trigger zone — or stop filling
+  /// the viewport — without any scroll gesture to fire [_onScroll]. We wait a
+  /// frame so the new layout is laid out before reading the scroll position.
+  void _maybeLoadMoreAfterLayoutChange() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _onScroll();
+    });
   }
 
   Future<void> _performSearch() async {
@@ -438,6 +450,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _layout = FeedLayout
           .values[(_layout.index + 1) % FeedLayout.values.length];
     });
+    _maybeLoadMoreAfterLayoutChange();
   }
 
   /// Long-pressing the layout button opens a sheet listing all three views
@@ -498,7 +511,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return InkWell(
       onTap: () {
         Navigator.of(sheetContext).pop();
-        if (_layout != layout) setState(() => _layout = layout);
+        if (_layout != layout) {
+          setState(() => _layout = layout);
+          _maybeLoadMoreAfterLayoutChange();
+        }
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
