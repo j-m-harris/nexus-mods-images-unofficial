@@ -426,10 +426,19 @@ class _HomeScreenState extends State<HomeScreen> {
             offstage: _currentTab != 1,
             child: TickerMode(
               enabled: _currentTab == 1,
-              child: SearchScreen(
-                games: _games,
-                onSearch: _onSearchSubmitted,
-                onCancel: () => setState(() => _currentTab = 0),
+              // The tabs all stay mounted, so the offstage search field keeps
+              // its slot in the route's focus scope. Without this, popping the
+              // lightbox back onto the feed restores focus to that hidden field
+              // and the keyboard springs up unbidden. Excluding focus while the
+              // search tab is inactive releases the field and blocks that
+              // restoration.
+              child: ExcludeFocus(
+                excluding: _currentTab != 1,
+                child: SearchScreen(
+                  games: _games,
+                  onSearch: _onSearchSubmitted,
+                  onCancel: () => setState(() => _currentTab = 0),
+                ),
               ),
             ),
           ),
