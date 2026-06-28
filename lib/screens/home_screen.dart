@@ -325,7 +325,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: NexusColors.primary,
                     ),
                   ),
-                  if (_hasActiveSearch || _hasNonDefaultSort)
+                  // Search term and sort only describe the feed, so keep the
+                  // subheader off the search and favourites tabs.
+                  if (_currentTab == 0 &&
+                      (_hasActiveSearch || _hasNonDefaultSort))
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.center,
