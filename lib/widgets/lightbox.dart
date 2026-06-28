@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/nexus_image.dart';
 import '../services/favourites_service.dart';
@@ -279,16 +280,28 @@ class _LightboxViewState extends State<LightboxView>
                         ),
                       ],
                       const SizedBox(height: 12),
-                      Wrap(
-                        alignment: WrapAlignment.center,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 20,
-                        runSpacing: 8,
-                        children: [
-                          _favouriteButton(),
-                          if (image.siteUrl != null)
-                            _linkButton('View on Nexus Mods', image.siteUrl!),
-                        ],
+                      // Keep the actions on a single line: under the FittedBox
+                      // the Row lays out unconstrained, then scales down to fit
+                      // narrow screens rather than wrapping onto a second line.
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            _favouriteButton(),
+                            if (image.siteUrl != null) ...[
+                              const SizedBox(width: 20),
+                              _iconAction(
+                                icon: Icons.share,
+                                label: 'Share',
+                                onTap: _shareImage,
+                              ),
+                              const SizedBox(width: 20),
+                              _linkButton('View on Nexus Mods', image.siteUrl!),
+                            ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -327,9 +340,9 @@ class _LightboxViewState extends State<LightboxView>
   /// same image is (un)favourited elsewhere.
   Widget _favouriteButton() {
     if (widget.fromFavourites) {
-      return _favouriteAction(
+      return _iconAction(
         icon: Icons.favorite,
-        label: 'Remove from favourites',
+        label: 'Remove favourite',
         onTap: _confirmRemoveFavourite,
       );
     }
@@ -338,7 +351,7 @@ class _LightboxViewState extends State<LightboxView>
       listenable: favourites,
       builder: (context, _) {
         final saved = favourites.isFavourite(widget.image.id);
-        return _favouriteAction(
+        return _iconAction(
           icon: saved ? Icons.favorite : Icons.favorite_border,
           label: saved ? 'Saved' : 'Save',
           onTap: _toggleFavourite,
@@ -347,7 +360,7 @@ class _LightboxViewState extends State<LightboxView>
     );
   }
 
-  Widget _favouriteAction({
+  Widget _iconAction({
     required IconData icon,
     required String label,
     required VoidCallback onTap,
@@ -432,6 +445,21 @@ class _LightboxViewState extends State<LightboxView>
 
   void _openUrl(String url) {
     launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  }
+
+  /// Opens the Android share sheet so the user can send the image's Nexus Mods
+  /// page URL to other apps. The title is included for context (and as the email
+  /// subject), with the URL on its own line so receiving apps still detect it.
+  Future<void> _shareImage() async {
+    final url = widget.image.siteUrl;
+    if (url == null) return;
+    final title = widget.image.displayTitle;
+    await SharePlus.instance.share(
+      ShareParams(
+        text: title.isNotEmpty ? '$title\n$url' : url,
+        subject: title.isNotEmpty ? title : null,
+      ),
+    );
   }
 
   String _formatDate(String dateStr) {

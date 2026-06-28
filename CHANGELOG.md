@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-06-28
+
+### Added
+
+- Share an image from the lightbox: a new **Share** action opens the Android
+  share sheet so you can send the image's Nexus Mods page URL to other apps.
+
+### Fixed
+
+- The keyboard no longer springs back up when returning to the feed after
+  closing the lightbox following a search.
+- The active search term is no longer shown in the app bar while viewing the
+  Favourites tab, where it does not apply.
+- The lightbox action row in the favourites view no longer wraps onto two
+  lines; the actions stay on a single line and scale to fit narrow screens.
+
 ## [1.2.0] - 2026-06-22
 
 ### Added
