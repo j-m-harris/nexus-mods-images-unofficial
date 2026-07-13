@@ -1,46 +1,102 @@
 # Feature Ideas
 
-Candidate features for the app, grounded in what already exists. The standout
-gap is that **nothing persists** — every filter, layout, and view resets on
-restart, and there is no user state at all. Most of the highest-value features
-fall out of adding a persistence layer.
+Candidate features, grounded in what exists as of **v1.3.0**. The previous revision of this file predates
+favourites and sharing; both have since shipped, so the list below is a fresh pass. It is ordered by how strongly
+users of other Android image apps (gallery apps, Reddit/Pinterest-style browsers, wallpaper apps) expect each
+feature, weighted by how cheaply the current code supports it.
 
-## Tier 1 — high value, natural fit
+Shipped since the last revision: local favourites with their own tab and layouts (1.2.0), share from the lightbox
+(1.3.0), and a persistence layer (`shared_preferences` via `FavouritesService`). Pull-to-refresh also already
+exists on the feed.
 
-- **Favorites / collections.** The single biggest missing piece. Tap-to-save on
-  cards, the grid tile, and in the lightbox; a dedicated favorites screen.
-  Requires a persistence layer (`sqflite`, or `shared_preferences` for a simple
-  ID set) — which unlocks everything below.
-- **Persist preferences.** Remember last layout, sort, per-page, and game filter
-  across launches. Cheap win once persistence exists.
-- **Search history + saved searches.** Search state (`searchText`, `gameId`,
-  `sort`, active facets) is already a clean bundle — serialize it into a
-  recent/saved-searches list. Low effort, high reuse of existing state.
-- **Share & download.** The lightbox only links out to Nexus Mods today. Add
-  `share_plus` (share the `siteUrl`/image) and save-to-gallery. Baseline
-  expectations for an image browser.
+Code-quality and performance follow-ups live in `RECOMMENDATIONS.md` and `PERFORMANCE_NOTES.md`; this file is
+product features only.
 
-## Tier 2 — depth on existing features
+## Tier 1 — table stakes for an image viewer
 
-- **Richer filtering.** Only `category` facets are wired up today. Add the
-  **adult content** toggle (the `adult` flag exists on every record but is
-  unused), plus filter/sort by author (`ownerName`) and game.
-- **Author view.** `ownerName`, `ownerAvatar`, and `ownerMemberId` already exist
-  — tapping an author could open their image feed (mirrors the existing
-  game-domain filter).
-- **Date-range filtering** using `createdAt`.
+Things users will reach for instinctively because every comparable Android app has them.
 
-## Tier 3 — polish / differentiation
+- **Swipe between images in the lightbox.** The single most-expected missing behaviour: in every gallery-style
+  app, opening an image and swiping left/right moves through the set. `LightboxView` takes one `NexusImage`;
+  wrap it in a `PageView` over the current result list (feed, favourites, or grid) with the zoom controller reset
+  per page. Near the end of the list, request the next feed page so swiping continues seamlessly. The aspect
+  cache and thumbnail-first crossfade already make each page cheap to show.
+- **Download to device.** Share currently sends the page URL only. Add a Download action that saves the
+  full-resolution file to `Pictures/Nexus Mods` via MediaStore (no storage permission needed on API 29+), with a
+  snackbar linking to the saved copy. While there, offer "share image" (the actual file via `share_plus`) next to
+  the existing "share link".
+- **Persist preferences.** Layout, sort, per-page and last tab still reset every launch even though
+  `shared_preferences` is already a dependency. Cheap win: serialize `_layout`, `_sort` and `_perPage` the same
+  way favourites are stored, restore in `initState`.
+- **Adult-content gate.** The `adult` flag renders as a badge in list/grid and not at all in the planetarium.
+  Add a toggle (default off) that blurs adult images with tap-to-reveal, and hide them from the planetarium when
+  off. This is also a store-review requirement, not just polish.
+- **Settings screen.** The natural home for the adult toggle, default layout/sort, cache controls (show usage,
+  clear), and future options below. There is currently no settings surface at all; a simple sheet or page off
+  the bottom nav overflow is enough.
 
-- **Offline mode** — persist viewed pages so the feed survives going offline
-  (the planetarium/grid already lean on caching).
-- **Planetarium upgrades** — auto-tour mode, tap-a-face-to-open, share the
-  current view.
-- **Slideshow / ambient mode** in the lightbox.
-- **Pull-to-refresh** and a jump-to-top button on long feeds.
+## Tier 2 — discovery and depth
+
+More ways to find and understand images, mostly built from fields the API already returns.
+
+- **Search history and saved searches.** Search state (`searchText`, `gameId`, `sort`, facets) is a clean bundle;
+  store the last N submitted searches and let users pin favourites. Surface recents under the search field, the
+  way every search-driven app does.
+- **Author view.** `ownerName`, `ownerAvatar` and `ownerMemberId` are already on every record. Tapping an author
+  should open their image feed (the API filter mirrors the existing game filter). Pairs naturally with the next
+  item.
+- **Followed games.** Users typically care about two or three games, not all of Nexus. Let them follow games and
+  add a "Following" feed scope (union of followed game filters, or a filter chip row). This is the foundation for
+  any future "new images from your games" notification.
+- **Image details sheet.** The lightbox shows a compact action row; add a swipe-up or info-button sheet with the
+  full metadata already fetched: title, description, category, game, author, upload date, views, rating, plus a
+  copy-link action. Comparable apps (Reddit clients, Pinterest) all offer an info surface.
+- **Date-range filter** using `createdAt`, e.g. quick chips for today / this week / this month.
+
+## Tier 3 — Android-native differentiation
+
+Features that make it feel like a first-class Android app rather than a web view. These are where a modded-games
+art feed can genuinely stand out.
+
+- **Set as wallpaper.** The obvious killer feature for this content: game screenshots and artwork are exactly
+  what people hunt wallpaper apps for. A lightbox action calling `WallpaperManager` (home/lock/both) via a small
+  platform channel or `wallpaper_manager_plus`.
+- **Daily wallpaper rotation.** Once set-as-wallpaper exists: a WorkManager job that rotates the wallpaper from
+  favourites or a saved search each day. This is the retention hook of apps like Backdrops and Muzei; a Muzei
+  provider would be a cheap additional integration for that audience.
+- **Home screen widget.** A glanceable "image of the day" (or random favourite) widget that opens the lightbox
+  on tap.
+- **Planetarium as screensaver.** The sphere is the app's signature feature; exposing it as an Android Daydream
+  (screensaver) service would be unique, and the auto-glide behaviour already exists.
+- **App shortcuts.** Long-press launcher shortcuts for Search, Favourites and Random feed — trivial manifest
+  work.
+- **Deep links.** Register for `nexusmods.com` image URLs so links shared from elsewhere open in the app's
+  lightbox instead of the browser.
+
+## Tier 4 — polish and resilience
+
+- **Offline-safe favourites.** Favourites persist metadata only; the pixels live in the normal image cache and
+  can be evicted, so the favourites tab can go blank offline. Copy each favourited thumbnail (or full image) into
+  app storage on save, and delete it on remove. This makes favourites the app's reliable offline surface.
+- **Collections within favourites.** Once favourites grow, users expect albums ("Skyrim builds", "wallpaper
+  candidates"). A `collectionIds` field on the stored record plus a picker keeps this simple.
+- **Slideshow / ambient mode** in the lightbox, feeding off the same list as lightbox swiping.
+- **Accessibility pass.** There is currently not a single `Semantics`, `semanticLabel` or `Tooltip` in `lib/`.
+  Nav buttons, cards, facet chips and lightbox actions need labels for TalkBack; images should use their title as
+  `semanticLabel`.
+- **Adaptive layout.** Grid column count and feed width are tuned for portrait phones; derive columns from
+  available width for tablets, landscape and foldables. Also worth adopting predictive back now that the
+  lightbox and search are push routes.
+- **Data saver mode.** A setting to stay on thumbnails (skip the full-res upgrade and lightbox original) on
+  metered connections; the card already has the thumbnail/full split, so this is mostly a gate.
+- **Jump-to-top button** on long feeds (pull-to-refresh exists; a quick way back up after deep scrolling does
+  not).
 
 ## Suggested order
 
-Do **persistence → favorites → persisted preferences** first. It is one
-foundational dependency that unblocks three of the most-expected features, and
-the search-state bundle is already in a shape that is easy to serialize.
+1. Lightbox swiping — most-expected gap, no new dependencies, improves every browsing surface at once.
+2. Download + share-image, and preference persistence — small, independent, high-visibility wins.
+3. Settings screen with the adult-content gate — unblocks store submission and hosts everything later.
+4. Set-as-wallpaper, then daily rotation — the differentiating pair; do it after settings exists so rotation has
+   a home for its options.
+5. Search history, author view and followed games — the discovery cluster, in whichever order feedback favours.
