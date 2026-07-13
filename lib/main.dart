@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/home_screen.dart';
 import 'services/favourites_service.dart';
+import 'services/review_service.dart';
 import 'theme.dart';
 
 Future<void> main() async {
@@ -9,6 +10,7 @@ Future<void> main() async {
     ..maximumSizeBytes = 50 * 1024 * 1024
     ..maximumSize = 80;
   await FavouritesService.instance.init();
+  await ReviewService.instance.init();
   runApp(const NexusImagesApp());
 }
 

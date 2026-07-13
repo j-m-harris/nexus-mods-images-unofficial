@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/nexus_image.dart';
 import '../services/favourites_service.dart';
 import '../services/image_aspect_cache.dart';
+import '../services/review_service.dart';
 import '../theme.dart';
 
 class LightboxView extends StatefulWidget {
@@ -387,7 +388,10 @@ class _LightboxViewState extends State<LightboxView>
   }
 
   Future<void> _toggleFavourite() async {
-    await FavouritesService.instance.toggle(widget.image);
+    final saved = await FavouritesService.instance.toggle(widget.image);
+    // A save (not an unsave) is the app's "moment of value" that counts
+    // towards the one-time in-app review request.
+    if (saved) ReviewService.instance.onFavouriteSaved();
   }
 
   /// Confirms before removing, then removes and closes the lightbox so the user
