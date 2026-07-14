@@ -57,3 +57,6 @@ frames per 220 ms transition; read the mid-transition frames. Clean up `/sdcard/
 - In the lightbox, tapping the image area closes it; swipe (`input swipe 850 900 150 900 120`) pages to the
   next image.
 - Quit with `kill $(cat <scratch>/flutter.pid)` — the background `flutter run` has no stdin for `q`.
+- When testing back-button behaviour, `dumpsys activity ... topResumedActivity` is NOT enough: a popped-empty
+  navigator leaves the activity resumed but rendering solid black. Always pair the dumpsys check with a
+  screencap of the actual feed.

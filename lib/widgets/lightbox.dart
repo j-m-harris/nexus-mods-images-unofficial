@@ -306,7 +306,19 @@ class _LightboxViewState extends State<LightboxView>
     super.dispose();
   }
 
+  /// Reveals the veiled image, shared with the listings via
+  /// [AdultRevealSession] so the tile behind unveils too.
+  void _revealAdult() {
+    setState(() => AdultRevealSession.instance.reveal(widget.image.id));
+  }
+
   void _handleDoubleTap() {
+    // While veiled there is nothing to zoom into: a double tap is read as an
+    // emphatic "show me" and reveals, exactly like a single tap.
+    if (_adultObscured) {
+      _revealAdult();
+      return;
+    }
     final isZoomedIn = _transformIsZoomed;
     final Matrix4 endMatrix;
     if (isZoomedIn) {
@@ -347,10 +359,7 @@ class _LightboxViewState extends State<LightboxView>
                   child: GestureDetector(
                     // While veiled, the first tap reveals; afterwards a tap
                     // closes the lightbox as usual.
-                    onTap: _adultObscured
-                        ? () => setState(
-                            () => AdultRevealSession.instance.reveal(widget.image.id))
-                        : _closeLightbox,
+                    onTap: _adultObscured ? _revealAdult : _closeLightbox,
                     onDoubleTapDown: (details) =>
                         _lastDoubleTapDetails = details,
                     onDoubleTap: _handleDoubleTap,
@@ -360,7 +369,9 @@ class _LightboxViewState extends State<LightboxView>
                       onInteractionUpdate: _onInteractionUpdate,
                       onInteractionEnd: _onInteractionEnd,
                       minScale: 1.0,
-                      maxScale: 5.0,
+                      // Pinch-zooming the veil would just magnify the blur;
+                      // zooming unlocks once the image is revealed.
+                      maxScale: _adultObscured ? 1.0 : 5.0,
                       child: Center(
                         child: AspectRatio(
                           aspectRatio: _imageAspect ?? (16 / 9),
