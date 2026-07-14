@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/feed_layout.dart';
 import 'adult_reveal_session.dart';
 
 /// How adult-flagged images are treated.
@@ -32,9 +33,11 @@ class SettingsService extends ChangeNotifier {
   static final SettingsService instance = SettingsService._();
 
   static const _adultModeKey = 'settings.adultContentMode';
+  static const _feedLayoutKey = 'settings.feedLayout';
 
   SharedPreferences? _prefs;
   AdultContentMode _adultMode = AdultContentMode.blur;
+  FeedLayout _feedLayout = FeedLayout.list;
 
   /// Loads persisted settings. Safe to call more than once; only the first
   /// call reads from disk.
@@ -45,6 +48,11 @@ class SettingsService extends ChangeNotifier {
     _adultMode = AdultContentMode.values.firstWhere(
       (mode) => mode.storageValue == stored,
       orElse: () => AdultContentMode.blur,
+    );
+    final storedLayout = _prefs?.getString(_feedLayoutKey);
+    _feedLayout = FeedLayout.values.firstWhere(
+      (layout) => layout.storageValue == storedLayout,
+      orElse: () => FeedLayout.list,
     );
   }
 
@@ -58,6 +66,16 @@ class SettingsService extends ChangeNotifier {
     AdultRevealSession.instance.clear();
     notifyListeners();
     await _prefs?.setString(_adultModeKey, mode.storageValue);
+  }
+
+  /// The listing layout last chosen via the layout button or view menu.
+  FeedLayout get feedLayout => _feedLayout;
+
+  Future<void> setFeedLayout(FeedLayout layout) async {
+    if (layout == _feedLayout) return;
+    _feedLayout = layout;
+    notifyListeners();
+    await _prefs?.setString(_feedLayoutKey, layout.storageValue);
   }
 
   /// Whether feed/search requests should include adult images at all.

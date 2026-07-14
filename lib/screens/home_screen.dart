@@ -26,7 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   static const double _navBarHeight = 48;
 
   int _currentTab = 0;
-  FeedLayout _layout = FeedLayout.list;
+  FeedLayout _layout = SettingsService.instance.feedLayout;
 
   final ScrollController _scrollController = ScrollController();
   List<NexusGame> _games = [];
@@ -636,6 +636,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _layout = FeedLayout
           .values[(_layout.index + 1) % FeedLayout.values.length];
     });
+    SettingsService.instance.setFeedLayout(_layout);
     _maybeLoadMoreAfterLayoutChange();
   }
 
@@ -699,6 +700,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.of(sheetContext).pop();
         if (_layout != layout) {
           setState(() => _layout = layout);
+          SettingsService.instance.setFeedLayout(layout);
           _maybeLoadMoreAfterLayoutChange();
         }
       },
