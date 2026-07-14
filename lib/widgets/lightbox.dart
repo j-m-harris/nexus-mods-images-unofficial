@@ -118,29 +118,41 @@ class _LightboxPagerState extends State<LightboxPager> {
     // recognizer (its pan slop loses the race only on slow drags, so fast
     // flicks would be swallowed) — instead of competing with it, paging is
     // driven from the viewer's own interaction callbacks via _dragBy/_settle.
-    return PageView.builder(
-      controller: _pageController,
-      physics: const NeverScrollableScrollPhysics(),
-      // Pre-builds the neighbouring pages, so their thumbnails start loading
-      // before the swipe begins.
-      allowImplicitScrolling: true,
-      itemCount: widget.images.length,
-      onPageChanged: (index) {
-        setState(() => _currentPage = index);
-        _maybeRequestMore(index);
+    //
+    // The PopScope must live here, once per route, NOT inside LightboxView:
+    // allowImplicitScrolling keeps the neighbouring pages alive, and a back
+    // press invokes EVERY PopScope registered on the route — per-page scopes
+    // meant one back popped the lightbox two or three times, popping the
+    // route below it (a black, empty navigator) or exiting the app outright.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) Navigator.pop(context);
       },
-      // allowImplicitScrolling keeps the neighbouring pages alive in the
-      // cache extent, where their Heroes would otherwise join the route
-      // transition and hijack other visible tiles — only the active page
-      // may contribute its Hero.
-      itemBuilder: (context, index) => HeroMode(
-        enabled: index == _currentPage,
-        child: LightboxView(
-          key: ValueKey(widget.images[index].id),
-          image: widget.images[index],
-          fromFavourites: widget.fromFavourites,
-          onPageDragUpdate: _dragBy,
-          onPageDragEnd: _settle,
+      child: PageView.builder(
+        controller: _pageController,
+        physics: const NeverScrollableScrollPhysics(),
+        // Pre-builds the neighbouring pages, so their thumbnails start loading
+        // before the swipe begins.
+        allowImplicitScrolling: true,
+        itemCount: widget.images.length,
+        onPageChanged: (index) {
+          setState(() => _currentPage = index);
+          _maybeRequestMore(index);
+        },
+        // allowImplicitScrolling keeps the neighbouring pages alive in the
+        // cache extent, where their Heroes would otherwise join the route
+        // transition and hijack other visible tiles — only the active page
+        // may contribute its Hero.
+        itemBuilder: (context, index) => HeroMode(
+          enabled: index == _currentPage,
+          child: LightboxView(
+            key: ValueKey(widget.images[index].id),
+            image: widget.images[index],
+            fromFavourites: widget.fromFavourites,
+            onPageDragUpdate: _dragBy,
+            onPageDragEnd: _settle,
+          ),
         ),
       ),
     );
@@ -324,12 +336,7 @@ class _LightboxViewState extends State<LightboxView>
     final dateStr =
         image.createdAt != null ? _formatDate(image.createdAt!) : '';
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) _closeLightbox();
-      },
-      child: Scaffold(
+    return Scaffold(
       backgroundColor: Colors.black.withValues(alpha: 0.95),
       body: SafeArea(
         child: Stack(
@@ -535,7 +542,6 @@ class _LightboxViewState extends State<LightboxView>
           ],
         ),
       ),
-    ),
     );
   }
 
