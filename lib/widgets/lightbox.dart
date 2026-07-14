@@ -56,6 +56,7 @@ class _LightboxPagerState extends State<LightboxPager> {
   late final PageController _pageController =
       PageController(initialPage: widget.initialIndex);
   bool _requestingMore = false;
+  late int _currentPage = widget.initialIndex;
 
   @override
   void initState() {
@@ -124,13 +125,23 @@ class _LightboxPagerState extends State<LightboxPager> {
       // before the swipe begins.
       allowImplicitScrolling: true,
       itemCount: widget.images.length,
-      onPageChanged: _maybeRequestMore,
-      itemBuilder: (context, index) => LightboxView(
-        key: ValueKey(widget.images[index].id),
-        image: widget.images[index],
-        fromFavourites: widget.fromFavourites,
-        onPageDragUpdate: _dragBy,
-        onPageDragEnd: _settle,
+      onPageChanged: (index) {
+        setState(() => _currentPage = index);
+        _maybeRequestMore(index);
+      },
+      // allowImplicitScrolling keeps the neighbouring pages alive in the
+      // cache extent, where their Heroes would otherwise join the route
+      // transition and hijack other visible tiles — only the active page
+      // may contribute its Hero.
+      itemBuilder: (context, index) => HeroMode(
+        enabled: index == _currentPage,
+        child: LightboxView(
+          key: ValueKey(widget.images[index].id),
+          image: widget.images[index],
+          fromFavourites: widget.fromFavourites,
+          onPageDragUpdate: _dragBy,
+          onPageDragEnd: _settle,
+        ),
       ),
     );
   }
