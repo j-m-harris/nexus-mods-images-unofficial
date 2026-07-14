@@ -117,12 +117,20 @@ class NexusApi {
     int count = 20,
     Map<String, Set<String>> activeFacets = const {},
     int? randomSeed,
+    bool includeAdult = true,
   }) async {
     final filter = <String, dynamic>{
       'type': [
         {'value': 'image', 'op': 'EQUALS'}
       ],
     };
+
+    if (!includeAdult) {
+      // The value must be a raw boolean — the API rejects "false" as a string.
+      filter['adultContent'] = [
+        {'value': false, 'op': 'EQUALS'}
+      ];
+    }
 
     if (gameId != null) {
       filter['gameId'] = [

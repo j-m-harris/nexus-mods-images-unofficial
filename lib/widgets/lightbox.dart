@@ -3,10 +3,13 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/nexus_image.dart';
+import '../services/adult_reveal_session.dart';
 import '../services/favourites_service.dart';
 import '../services/image_aspect_cache.dart';
 import '../services/review_service.dart';
+import '../services/settings_service.dart';
 import '../theme.dart';
+import 'adult_content_veil.dart';
 
 /// Swipeable full-screen viewer: hosts one [LightboxView] per image in a
 /// [PageView], so swiping left/right moves through the set the image was
@@ -177,6 +180,15 @@ class _LightboxViewState extends State<LightboxView>
   ImageStream? _aspectStream;
   ImageStreamListener? _aspectListener;
 
+  /// Whether the image should currently sit behind the adult-content veil.
+  /// Reveals are shared via [AdultRevealSession]: an image unblurred on its
+  /// card/tile opens here already revealed, while one opened fresh (e.g. from
+  /// the planetarium) starts veiled.
+  bool get _adultObscured =>
+      widget.image.adult &&
+      SettingsService.instance.blurAdult &&
+      !AdultRevealSession.isRevealed(widget.image.id);
+
   @override
   void initState() {
     super.initState();
@@ -315,7 +327,12 @@ class _LightboxViewState extends State<LightboxView>
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: _closeLightbox,
+                    // While veiled, the first tap reveals; afterwards a tap
+                    // closes the lightbox as usual.
+                    onTap: _adultObscured
+                        ? () => setState(
+                            () => AdultRevealSession.reveal(widget.image.id))
+                        : _closeLightbox,
                     onDoubleTapDown: (details) =>
                         _lastDoubleTapDetails = details,
                     onDoubleTap: _handleDoubleTap,
@@ -366,6 +383,8 @@ class _LightboxViewState extends State<LightboxView>
                                     size: 64,
                                   ),
                                 ),
+                                if (_adultObscured)
+                                  const AdultContentVeil(),
                               ],
                             ),
                           ),

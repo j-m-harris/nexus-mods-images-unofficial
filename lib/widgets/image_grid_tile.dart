@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/nexus_image.dart';
+import '../services/adult_reveal_session.dart';
+import '../services/settings_service.dart';
 import '../theme.dart';
+import 'adult_content_veil.dart';
 
 /// A lightweight square thumbnail tile for the alternative grid layout.
 ///
 /// Unlike [ImageCard] it shows no metadata and never upgrades to full-res — it
 /// is built for fast scanning. Tapping heroes into the lightbox (which shows the
 /// full, uncropped image), so cropping the thumbnail to a square is harmless.
-class ImageGridTile extends StatelessWidget {
+class ImageGridTile extends StatefulWidget {
   final NexusImage image;
   final VoidCallback onTap;
 
@@ -19,13 +22,30 @@ class ImageGridTile extends StatelessWidget {
   });
 
   @override
+  State<ImageGridTile> createState() => _ImageGridTileState();
+}
+
+class _ImageGridTileState extends State<ImageGridTile> {
+  /// See [AdultRevealSession]: reveals are keyed by image id and shared with
+  /// the card and lightbox.
+  bool get _adultObscured =>
+      widget.image.adult &&
+      SettingsService.instance.blurAdult &&
+      !AdultRevealSession.isRevealed(widget.image.id);
+
+  @override
   Widget build(BuildContext context) {
+    final image = widget.image;
     final mq = MediaQuery.of(context);
     // Tiles are roughly a third of the screen wide (3-column grid).
     final decodeWidth = (mq.size.width / 3 * mq.devicePixelRatio).round();
 
     return GestureDetector(
-      onTap: onTap,
+      // While veiled, the first tap reveals; only then does a tap open the
+      // lightbox.
+      onTap: _adultObscured
+          ? () => setState(() => AdultRevealSession.reveal(widget.image.id))
+          : widget.onTap,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -44,6 +64,7 @@ class ImageGridTile extends StatelessWidget {
               ),
             ),
           ),
+          if (_adultObscured) const AdultContentVeil(compact: true),
           if (image.adult)
             Positioned(
               top: 4,

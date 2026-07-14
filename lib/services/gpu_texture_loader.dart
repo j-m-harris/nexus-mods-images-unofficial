@@ -34,8 +34,14 @@ const int _maxPooledTextures = 32;
 /// unavailable, so callers can fall back to a placeholder. Hand a
 /// no-longer-visible texture back to [releaseTileTexture] to make it available
 /// for reuse.
+///
+/// With [obscure] the tile is baked blurred-and-darkened (the adult-content
+/// veil's look) — the sphere renders raw textures, so the veil has to be
+/// applied here rather than composited in the widget tree.
 Future<({gpu.Texture texture, double aspect})?> loadTileTexture(
-    String url) async {
+  String url, {
+  bool obscure = false,
+}) async {
   try {
     final info = await _resolveUiImage(url, kTileTextureSize);
     final double aspect;
@@ -44,7 +50,8 @@ Future<({gpu.Texture texture, double aspect})?> loadTileTexture(
     // hold the only other handle on it.
     try {
       aspect = info.image.width / info.image.height;
-      square = await _centreCropSquare(info.image, kTileTextureSize);
+      square =
+          await _centreCropSquare(info.image, kTileTextureSize, obscure: obscure);
     } finally {
       info.dispose();
     }
@@ -90,16 +97,33 @@ void releaseTileTexture(gpu.Texture texture) {
 }
 
 /// Renders the centred maximal square of [source] into a fresh [size]² image,
-/// so a non-square source isn't stretched — the long edge is cropped.
-Future<ui.Image> _centreCropSquare(ui.Image source, int size) async {
+/// so a non-square source isn't stretched — the long edge is cropped. With
+/// [obscure], the content is blurred and darkened to match the widget-tree
+/// adult-content veil.
+Future<ui.Image> _centreCropSquare(
+  ui.Image source,
+  int size, {
+  bool obscure = false,
+}) async {
   final w = source.width.toDouble();
   final h = source.height.toDouble();
   final side = w < h ? w : h;
   final src = Rect.fromLTWH((w - side) / 2, (h - side) / 2, side, side);
   final dst = Rect.fromLTWH(0, 0, size.toDouble(), size.toDouble());
   final recorder = ui.PictureRecorder();
-  Canvas(recorder).drawImageRect(
-      source, src, dst, Paint()..filterQuality = FilterQuality.medium);
+  final canvas = Canvas(recorder);
+  final paint = Paint()..filterQuality = FilterQuality.medium;
+  if (obscure) {
+    paint.imageFilter = ui.ImageFilter.blur(
+      sigmaX: 20,
+      sigmaY: 20,
+      tileMode: ui.TileMode.clamp,
+    );
+  }
+  canvas.drawImageRect(source, src, dst, paint);
+  if (obscure) {
+    canvas.drawRect(dst, Paint()..color = const Color(0x59000000));
+  }
   final picture = recorder.endRecording();
   try {
     return await picture.toImage(size, size);

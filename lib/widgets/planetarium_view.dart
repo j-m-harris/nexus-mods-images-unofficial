@@ -12,6 +12,7 @@ import 'package:vector_math/vector_math.dart' as vm;
 import '../models/nexus_image.dart';
 import '../services/gpu_texture_loader.dart';
 import '../services/image_aspect_cache.dart';
+import '../services/settings_service.dart';
 import '../theme.dart';
 
 /// A "planetarium" image browser: the viewer sits at the centre of a sphere and
@@ -586,7 +587,13 @@ class _PlanetariumViewState extends State<PlanetariumView>
     if (image == null) return;
     cell.loading = true;
     final gen = cell.loadGen;
-    final result = await loadTileTexture(image.thumbnailUrl);
+    // Sphere tiles can't sit behind the widget-tree veil, so adult images get
+    // the veil baked into their texture instead. There is no per-tile reveal:
+    // tapping the tile opens the lightbox, which is where the reveal lives.
+    final result = await loadTileTexture(
+      image.thumbnailUrl,
+      obscure: image.adult && SettingsService.instance.blurAdult,
+    );
     if (!mounted) {
       if (result != null) releaseTileTexture(result.texture);
       return;

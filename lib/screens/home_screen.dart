@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/feed_layout.dart';
 import '../models/nexus_image.dart';
 import '../services/nexus_api.dart';
+import '../services/settings_service.dart';
 import '../theme.dart';
 import '../widgets/image_card.dart';
 import '../widgets/image_grid_tile.dart';
@@ -66,14 +67,24 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    SettingsService.instance.addListener(_onSettingsChanged);
     _loadGames();
     _performSearch();
   }
 
   @override
   void dispose() {
+    SettingsService.instance.removeListener(_onSettingsChanged);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  /// The adult-content setting changes what the API is asked for, so the feed
+  /// refetches from the top whenever it flips.
+  void _onSettingsChanged() {
+    if (!mounted) return;
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
+    _performSearch();
   }
 
   Future<void> _loadGames() async {
@@ -127,6 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
         count: _perPage,
         activeFacets: _activeFacets,
         randomSeed: _randomSeed,
+        includeAdult: SettingsService.instance.includeAdultInFeed,
       );
       if (generation != _fetchGeneration || !mounted) return;
       setState(() {
@@ -159,6 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
         count: _perPage,
         activeFacets: _activeFacets,
         randomSeed: _randomSeed,
+        includeAdult: SettingsService.instance.includeAdultInFeed,
       );
       if (generation != _fetchGeneration || !mounted) return;
       final seenIds = _images.map((img) => img.id).toSet();
@@ -220,6 +233,114 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         transitionsBuilder: (_, animation, __, child) =>
             FadeTransition(opacity: animation, child: child),
+      ),
+    );
+  }
+
+  /// A minimal settings surface (the natural home for future options). The
+  /// adult-content switch takes effect immediately: [SettingsService] notifies
+  /// and [_onSettingsChanged] refetches the feed with the new filter.
+  void _showSettingsSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: NexusColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: ListenableBuilder(
+          listenable: SettingsService.instance,
+          builder: (ctx, _) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: NexusColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Settings',
+                  style: TextStyle(
+                    color: NexusColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'ADULT CONTENT',
+                    style: TextStyle(
+                      color: NexusColors.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ),
+              RadioGroup<AdultContentMode>(
+                groupValue: SettingsService.instance.adultMode,
+                onChanged: (mode) {
+                  if (mode != null) {
+                    SettingsService.instance.setAdultMode(mode);
+                  }
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final (mode, label, detail) in const [
+                      (
+                        AdultContentMode.hide,
+                        'Hide',
+                        'Left out of the feed entirely.',
+                      ),
+                      (
+                        AdultContentMode.blur,
+                        'Blur',
+                        'Shown, but blurred until tapped.',
+                      ),
+                      (
+                        AdultContentMode.show,
+                        'Show',
+                        'Shown normally.',
+                      ),
+                    ])
+                      RadioListTile<AdultContentMode>(
+                        value: mode,
+                        dense: true,
+                        activeColor: NexusColors.primary,
+                        title: Text(
+                          label,
+                          style: const TextStyle(
+                            color: NexusColors.textPrimary,
+                            fontSize: 14,
+                          ),
+                        ),
+                        subtitle: Text(
+                          detail,
+                          style: const TextStyle(
+                            color: NexusColors.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -415,6 +536,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ))
                   .toList(),
             ),
+          IconButton(
+            icon: Icon(Icons.tune, color: NexusColors.textPrimary),
+            tooltip: 'Settings',
+            onPressed: _showSettingsSheet,
+          ),
         ],
         elevation: 0,
       ),
@@ -718,6 +844,10 @@ class _HomeScreenState extends State<HomeScreen> {
       return Padding(
         padding: EdgeInsets.only(top: topInset, bottom: bottomInset),
         child: PlanetariumView(
+          // Adult tiles bake the veil into their textures at load time, so a
+          // mode change must rebuild them — remounting on mode change is the
+          // simple way to force that (a refetch alone may keep every tile).
+          key: ValueKey(SettingsService.instance.adultMode),
           images: _images,
           onImageTap: _openLightbox,
           onRequestMore: _loadNextPage,

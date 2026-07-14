@@ -5,8 +5,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 import '../models/nexus_image.dart';
+import '../services/adult_reveal_session.dart';
 import '../services/image_aspect_cache.dart';
+import '../services/settings_service.dart';
 import '../theme.dart';
+import 'adult_content_veil.dart';
 
 class ImageCard extends StatefulWidget {
   final NexusImage image;
@@ -39,6 +42,13 @@ class _ImageCardState extends State<ImageCard> {
   TapGestureRecognizer? _gameTap;
   bool _aspectInitialized = false;
   int? _decodeWidth;
+  /// Whether the image should currently sit behind the adult-content veil.
+  /// Reveals live in [AdultRevealSession] (keyed by image id), so revealing
+  /// here carries into the lightbox and survives card recycling.
+  bool get _adultObscured =>
+      widget.image.adult &&
+      SettingsService.instance.blurAdult &&
+      !AdultRevealSession.isRevealed(widget.image.id);
 
   @override
   void initState() {
@@ -317,7 +327,12 @@ class _ImageCardState extends State<ImageCard> {
 
         // --- Full-width image (silently upgrades to full res) ---
         GestureDetector(
-          onTap: widget.onTap,
+          // While veiled, the first tap reveals; only then does a tap open
+          // the lightbox.
+          onTap: _adultObscured
+              ? () =>
+                  setState(() => AdultRevealSession.reveal(widget.image.id))
+              : widget.onTap,
           child: AspectRatio(
             aspectRatio: 16 / 9,
             child: Stack(
@@ -373,6 +388,7 @@ class _ImageCardState extends State<ImageCard> {
                       ),
                     ),
                   ),
+                if (_adultObscured) const AdultContentVeil(),
                 if (image.adult)
                   Positioned(
                     top: 8,

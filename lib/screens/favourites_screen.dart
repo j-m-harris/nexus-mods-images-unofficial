@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/feed_layout.dart';
 import '../models/nexus_image.dart';
 import '../services/favourites_service.dart';
+import '../services/settings_service.dart';
 import '../theme.dart';
 import '../widgets/image_card.dart';
 import '../widgets/image_grid_tile.dart';
@@ -66,7 +67,11 @@ class FavouritesScreen extends StatelessWidget {
     final bottomInset = media.padding.bottom;
 
     return ListenableBuilder(
-      listenable: FavouritesService.instance,
+      // Settings matter too: the adult-content toggle changes which
+      // favourites are veiled (list/grid) or hidden (sphere).
+      listenable: Listenable.merge(
+        [FavouritesService.instance, SettingsService.instance],
+      ),
       builder: (context, _) {
         final favourites = FavouritesService.instance.favourites;
         return Column(
@@ -92,10 +97,13 @@ class FavouritesScreen extends StatelessWidget {
     if (layout == FeedLayout.sphere) {
       // Favourites are a finite local list, so there is nothing to page in —
       // PlanetariumView wraps the cursor back to the first image when the list
-      // is exhausted.
+      // is exhausted. Adult favourites render as veiled (blurred) tiles unless
+      // the adult-content setting is Show.
       return Padding(
         padding: EdgeInsets.only(bottom: bottomInset),
         child: PlanetariumView(
+          // Remount on mode change so veiled tile textures are rebuilt.
+          key: ValueKey(SettingsService.instance.adultMode),
           images: favourites,
           onImageTap: (image) => _openLightbox(context, favourites, image),
           active: active,

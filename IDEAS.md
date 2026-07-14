@@ -7,9 +7,12 @@ feature, weighted by how cheaply the current code supports it.
 
 Shipped since the last revision: local favourites with their own tab and layouts (1.2.0), share from the lightbox
 (1.3.0), a persistence layer (`shared_preferences` via `FavouritesService`), the one-time in-app review request
-(fires on the fifth favourite save), and lightbox swiping (swipe left/right through the feed or favourites, with
-seamless paging into new results and zoom-aware gesture handling). Pull-to-refresh also already exists on the
-feed.
+(fires on the fifth favourite save), lightbox swiping (1.4.0), and the adult-content gate (a three-way setting
+in a new settings sheet off the app bar: Hide excludes adult images from the feed server-side, Blur — the
+default — shows them behind a blurred tap-to-reveal veil, Show renders them normally with just the badge.
+Sphere tiles bake the blur into their textures; tapping one opens the still-veiled lightbox. Reveals are
+session-scoped and shared across surfaces, so unblurring a card carries into its lightbox page). Pull-to-refresh
+also already exists on the feed.
 
 Code-quality and performance follow-ups live in `RECOMMENDATIONS.md` and `PERFORMANCE_NOTES.md`; this file is
 product features only.
@@ -25,12 +28,8 @@ Things users will reach for instinctively because every comparable Android app h
 - **Persist preferences.** Layout, sort, per-page and last tab still reset every launch even though
   `shared_preferences` is already a dependency. Cheap win: serialize `_layout`, `_sort` and `_perPage` the same
   way favourites are stored, restore in `initState`.
-- **Adult-content gate.** The `adult` flag renders as a badge in list/grid and not at all in the planetarium.
-  Add a toggle (default off) that blurs adult images with tap-to-reveal, and hide them from the planetarium when
-  off. This is also a store-review requirement, not just polish.
-- **Settings screen.** The natural home for the adult toggle, default layout/sort, cache controls (show usage,
-  clear), and future options below. There is currently no settings surface at all; a simple sheet or page off
-  the bottom nav overflow is enough.
+- **Settings screen.** A minimal settings sheet now exists off the app bar (it hosts the adult-content toggle).
+  Grow it into the home for default layout/sort, cache controls (show usage, clear), and future options below.
 
 ## Tier 2 — discovery and depth
 
@@ -92,7 +91,6 @@ art feed can genuinely stand out.
 ## Suggested order
 
 1. Download + share-image, and preference persistence — small, independent, high-visibility wins.
-2. Settings screen with the adult-content gate — unblocks store submission and hosts everything later.
-3. Set-as-wallpaper, then daily rotation — the differentiating pair; do it after settings exists so rotation has
-   a home for its options.
-4. Search history, author view and followed games — the discovery cluster, in whichever order feedback favours.
+2. Set-as-wallpaper, then daily rotation — the differentiating pair; the settings sheet gives rotation options a
+   home.
+3. Search history, author view and followed games — the discovery cluster, in whichever order feedback favours.
