@@ -19,6 +19,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   favourites, the app asks Google Play to show its rate-this-app dialog.
   The request is only ever made once, and removing favourites does not
   reset the count.
+- An adult content setting, in a new settings sheet behind the tune icon in
+  the app bar, with three modes: **Hide** leaves adult-flagged images out of
+  the feed entirely, **Blur** (the default) shows them behind an obscured
+  tap-to-reveal preview, and **Show** displays them normally with just the
+  ADULT badge. The choice persists across restarts, and changing it puts
+  every previously revealed image back behind the veil.
+- The obscured preview is built from a tiny copy of the thumbnail scaled
+  up, so nothing recognisable can show through at any size, and the
+  full-resolution image is not downloaded until an image is actually
+  revealed. Revealing animates smoothly, and a reveal follows the image
+  between views for the rest of the session: unveil a card and its lightbox
+  opens revealed; reveal in the lightbox and the tile behind it is unveiled
+  when you return.
+- Planetarium tiles honour the setting too: gated images render as blurred
+  tiles marked with a hidden-eye glyph (tapping one opens the still-veiled
+  lightbox), and a tile refreshes to its revealed form after its image is
+  revealed in the lightbox.
 
 ## [1.3.0] - 2026-06-28
 

@@ -31,7 +31,7 @@ class _ImageGridTileState extends State<ImageGridTile> {
   bool get _adultObscured =>
       widget.image.adult &&
       SettingsService.instance.blurAdult &&
-      !AdultRevealSession.isRevealed(widget.image.id);
+      !AdultRevealSession.instance.isRevealed(widget.image.id);
 
   @override
   Widget build(BuildContext context) {
@@ -44,27 +44,40 @@ class _ImageGridTileState extends State<ImageGridTile> {
       // While veiled, the first tap reveals; only then does a tap open the
       // lightbox.
       onTap: _adultObscured
-          ? () => setState(() => AdultRevealSession.reveal(widget.image.id))
+          ? () => setState(() => AdultRevealSession.instance.reveal(widget.image.id))
           : widget.onTap,
       child: Stack(
         fit: StackFit.expand,
         children: [
+          // The veil lives inside the Hero so a flight of a still-veiled
+          // image carries the veil with it instead of flashing the real
+          // thumbnail.
           Hero(
             tag: 'image-${image.id}',
-            child: CachedNetworkImage(
-              imageUrl: image.thumbnailUrl,
-              fit: BoxFit.cover,
-              memCacheWidth: decodeWidth,
-              placeholder: (_, __) =>
-                  Container(color: NexusColors.imagePlaceholder),
-              errorWidget: (_, __, ___) => Container(
-                color: NexusColors.imagePlaceholder,
-                child: Icon(Icons.broken_image_outlined,
-                    color: NexusColors.textMuted),
-              ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CachedNetworkImage(
+                  imageUrl: image.thumbnailUrl,
+                  fit: BoxFit.cover,
+                  memCacheWidth: decodeWidth,
+                  placeholder: (_, __) =>
+                      Container(color: NexusColors.imagePlaceholder),
+                  errorWidget: (_, __, ___) => Container(
+                    color: NexusColors.imagePlaceholder,
+                    child: Icon(Icons.broken_image_outlined,
+                        color: NexusColors.textMuted),
+                  ),
+                ),
+                if (image.adult && SettingsService.instance.blurAdult)
+                  AdultContentVeil(
+                    thumbnailUrl: image.thumbnailUrl,
+                    compact: true,
+                    revealed: !_adultObscured,
+                  ),
+              ],
             ),
           ),
-          if (_adultObscured) const AdultContentVeil(compact: true),
           if (image.adult)
             Positioned(
               top: 4,

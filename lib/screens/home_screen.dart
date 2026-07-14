@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/feed_layout.dart';
 import '../models/nexus_image.dart';
+import '../services/adult_reveal_session.dart';
 import '../services/nexus_api.dart';
 import '../services/settings_service.dart';
 import '../theme.dart';
@@ -46,6 +47,11 @@ class _HomeScreenState extends State<HomeScreen> {
   int _perPage = 20;
   int? _randomSeed;
 
+  /// What [SettingsService.includeAdultInFeed] was when the feed last
+  /// fetched, so [_onSettingsChanged] can tell whether a mode change actually
+  /// affects the query.
+  bool _includedAdultInFeed = SettingsService.instance.includeAdultInFeed;
+
   bool get _hasActiveSearch =>
       (_searchText != null && _searchText!.isNotEmpty) || _gameId != null;
 
@@ -68,6 +74,9 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     SettingsService.instance.addListener(_onSettingsChanged);
+    // Rebuild when an adult image is revealed elsewhere (the lightbox), so
+    // the listing behind it unveils the matching card/tile.
+    AdultRevealSession.instance.addListener(_onRevealsChanged);
     _loadGames();
     _performSearch();
   }
@@ -75,14 +84,28 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     SettingsService.instance.removeListener(_onSettingsChanged);
+    AdultRevealSession.instance.removeListener(_onRevealsChanged);
     _scrollController.dispose();
     super.dispose();
   }
 
-  /// The adult-content setting changes what the API is asked for, so the feed
-  /// refetches from the top whenever it flips.
+  void _onRevealsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// The adult-content setting only changes what the API is asked for when it
+  /// crosses the Hide boundary — Blur and Show fetch identical content. So a
+  /// Hide flip refetches from the top, while Blur <-> Show just rebuilds (the
+  /// veils and the sphere's texture key react to the mode at build time),
+  /// keeping the scroll position and avoiding a needless request.
   void _onSettingsChanged() {
     if (!mounted) return;
+    final includeAdult = SettingsService.instance.includeAdultInFeed;
+    if (includeAdult == _includedAdultInFeed) {
+      setState(() {});
+      return;
+    }
+    _includedAdultInFeed = includeAdult;
     if (_scrollController.hasClients) _scrollController.jumpTo(0);
     _performSearch();
   }

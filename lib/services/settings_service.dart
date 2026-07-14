@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'adult_reveal_session.dart';
+
 /// How adult-flagged images are treated.
 enum AdultContentMode {
   /// Excluded from the feed server-side; local copies (favourites) stay
@@ -51,6 +53,9 @@ class SettingsService extends ChangeNotifier {
   Future<void> setAdultMode(AdultContentMode mode) async {
     if (mode == _adultMode) return;
     _adultMode = mode;
+    // Changing mode re-baselines what is gated, so per-image reveals from the
+    // previous mode no longer apply.
+    AdultRevealSession.instance.clear();
     notifyListeners();
     await _prefs?.setString(_adultModeKey, mode.storageValue);
   }

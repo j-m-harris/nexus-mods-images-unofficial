@@ -10,6 +10,7 @@ import 'package:flutter_scene/gpu.dart' as gpu;
 import 'package:vector_math/vector_math.dart' as vm;
 
 import '../models/nexus_image.dart';
+import '../services/adult_reveal_session.dart';
 import '../services/gpu_texture_loader.dart';
 import '../services/image_aspect_cache.dart';
 import '../services/settings_service.dart';
@@ -93,6 +94,10 @@ class _Cell {
   gpu.Texture? texture;
   bool assigned = false;
   bool loading = false;
+  // Whether the loaded [texture] was baked with the adult-content veil.
+  // Compared against the current gate state each tick so a tile whose image
+  // was revealed (or re-veiled) reloads instead of showing a stale bake.
+  bool obscured = false;
   // Bumped whenever the cell's content changes (assign / clear). An in-flight
   // texture load captures it at start and discards its result on mismatch —
   // the image id alone can't tell "still the same assignment" from "cleared
@@ -542,8 +547,14 @@ class _PlanetariumViewState extends State<PlanetariumView>
           }
         }
         if (cell.assigned &&
-            cell.texture == null &&
             !cell.loading &&
+            // Load a missing texture, or reload one whose baked veil state no
+            // longer matches (image revealed in the lightbox, or re-veiled by
+            // a mode change) — the old texture stays visible until the
+            // replacement lands.
+            (cell.texture == null ||
+                (cell.image != null &&
+                    cell.obscured != _imageObscured(cell.image!))) &&
             cell.failures < _maxLoadAttempts &&
             (cell.retryAtMs == null || nowMs >= cell.retryAtMs!)) {
           _loadCellTexture(cell);
@@ -560,6 +571,7 @@ class _PlanetariumViewState extends State<PlanetariumView>
     cell.image = image;
     cell.assigned = true;
     cell.loading = false;
+    cell.obscured = false;
     cell.failures = 0;
     cell.retryAtMs = null;
     cell.fadeStartMs = null;
@@ -575,12 +587,21 @@ class _PlanetariumViewState extends State<PlanetariumView>
     cell.image = null;
     cell.texture = null;
     cell.loading = false;
+    cell.obscured = false;
     cell.failures = 0;
     cell.retryAtMs = null;
     cell.fadeStartMs = null;
     _setFill(cell); // swaps the material to the blank texture first...
     if (tex != null) releaseTileTexture(tex); // ...so it's safe to reuse now.
   }
+
+  /// Whether [image]'s sphere tile must be baked with the veil right now.
+  /// Tracks the reveal session too: revealing in the lightbox unblurs the
+  /// tile (via the reload check in [_recycle]), and a re-veil blurs it back.
+  bool _imageObscured(NexusImage image) =>
+      image.adult &&
+      SettingsService.instance.blurAdult &&
+      !AdultRevealSession.instance.isRevealed(image.id);
 
   Future<void> _loadCellTexture(_Cell cell) async {
     final image = cell.image;
@@ -590,9 +611,10 @@ class _PlanetariumViewState extends State<PlanetariumView>
     // Sphere tiles can't sit behind the widget-tree veil, so adult images get
     // the veil baked into their texture instead. There is no per-tile reveal:
     // tapping the tile opens the lightbox, which is where the reveal lives.
+    final obscure = _imageObscured(image);
     final result = await loadTileTexture(
       image.thumbnailUrl,
-      obscure: image.adult && SettingsService.instance.blurAdult,
+      obscure: obscure,
     );
     if (!mounted) {
       if (result != null) releaseTileTexture(result.texture);
@@ -607,17 +629,23 @@ class _PlanetariumViewState extends State<PlanetariumView>
     cell.loading = false;
     if (result == null) {
       // Schedule a retry; after the attempt cap, _animate stops the pulse and
-      // the face settles on the static fill until it recycles.
+      // the face settles on the static fill until it recycles. A failed
+      // veil-state reload keeps showing the old texture instead of blanking.
       cell.failures++;
       cell.retryAtMs = _elapsed.inMilliseconds + _retryDelayMs;
-      _setFill(cell);
+      if (cell.texture == null) _setFill(cell);
       return;
     }
     // Record the real aspect so the lightbox can frame the full image without a
     // reflow when this tile is tapped (the tile texture itself is square).
     imageAspectCache[image.id] = result.aspect;
+    // On a veil-state reload this replaces a live texture: rebind the material
+    // to the new one first, then pool the old.
+    final oldTexture = cell.texture;
     cell.texture = result.texture;
+    cell.obscured = obscure;
     _applyImage(cell);
+    if (oldTexture != null) releaseTileTexture(oldTexture);
   }
 
   void _onTick(Duration elapsed) {

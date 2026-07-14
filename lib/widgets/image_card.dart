@@ -48,7 +48,7 @@ class _ImageCardState extends State<ImageCard> {
   bool get _adultObscured =>
       widget.image.adult &&
       SettingsService.instance.blurAdult &&
-      !AdultRevealSession.isRevealed(widget.image.id);
+      !AdultRevealSession.instance.isRevealed(widget.image.id);
 
   @override
   void initState() {
@@ -159,6 +159,10 @@ class _ImageCardState extends State<ImageCard> {
 
   void _startUpgradeTimer() {
     if (_fullResReady) return;
+    // No full-res fetch behind the veil: the pixels may never be looked at,
+    // and shouldn't cost data until they are. _revealAdult restarts the
+    // upgrade when the veil comes off.
+    if (_adultObscured) return;
     if (_upgradeTimer != null && _upgradeTimer!.isActive) return;
     _upgradeTimer = Timer(const Duration(seconds: 2), () {
       if (!mounted) return;
@@ -170,6 +174,14 @@ class _ImageCardState extends State<ImageCard> {
         if (mounted) setState(() => _fullResReady = true);
       }).catchError((_) {});
     });
+  }
+
+  /// Reveals the image and starts the full-res upgrade that the veil was
+  /// holding back — the card is visible (it was just tapped), but no
+  /// visibility change will fire to start it otherwise.
+  void _revealAdult() {
+    setState(() => AdultRevealSession.instance.reveal(widget.image.id));
+    _startUpgradeTimer();
   }
 
   void _onVisibility(VisibilityInfo info) {
@@ -329,29 +341,38 @@ class _ImageCardState extends State<ImageCard> {
         GestureDetector(
           // While veiled, the first tap reveals; only then does a tap open
           // the lightbox.
-          onTap: _adultObscured
-              ? () =>
-                  setState(() => AdultRevealSession.reveal(widget.image.id))
-              : widget.onTap,
+          onTap: _adultObscured ? _revealAdult : widget.onTap,
           child: AspectRatio(
             aspectRatio: 16 / 9,
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // Thumbnail (always present)
+                // Thumbnail (always present). The veil lives inside the Hero
+                // so a flight of a still-veiled image carries the veil with
+                // it instead of flashing the real thumbnail.
                 Hero(
                   tag: 'image-${image.id}',
-                  child: CachedNetworkImage(
-                    imageUrl: image.thumbnailUrl,
-                    fit: BoxFit.cover,
-                    memCacheWidth: decodeWidth,
-                    placeholder: (_, __) =>
-                        Container(color: NexusColors.imagePlaceholder),
-                    errorWidget: (_, __, ___) => Container(
-                      color: NexusColors.imagePlaceholder,
-                      child: Icon(Icons.broken_image_outlined,
-                          color: NexusColors.textMuted),
-                    ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      CachedNetworkImage(
+                        imageUrl: image.thumbnailUrl,
+                        fit: BoxFit.cover,
+                        memCacheWidth: decodeWidth,
+                        placeholder: (_, __) =>
+                            Container(color: NexusColors.imagePlaceholder),
+                        errorWidget: (_, __, ___) => Container(
+                          color: NexusColors.imagePlaceholder,
+                          child: Icon(Icons.broken_image_outlined,
+                              color: NexusColors.textMuted),
+                        ),
+                      ),
+                      if (image.adult && SettingsService.instance.blurAdult)
+                        AdultContentVeil(
+                          thumbnailUrl: image.thumbnailUrl,
+                          revealed: !_adultObscured,
+                        ),
+                    ],
                   ),
                 ),
                 // Full-res overlay (fades in when ready)
@@ -388,7 +409,6 @@ class _ImageCardState extends State<ImageCard> {
                       ),
                     ),
                   ),
-                if (_adultObscured) const AdultContentVeil(),
                 if (image.adult)
                   Positioned(
                     top: 8,

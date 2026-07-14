@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_scene/scene.dart' show gpuTextureFromImage;
 import 'package:flutter_scene/gpu.dart' as gpu;
+
+import '../theme.dart';
 
 /// Edge length, in pixels, of the square textures used for planetarium tiles.
 /// Every tile renders a centred square crop of its image, so all tile textures
@@ -123,6 +125,26 @@ Future<ui.Image> _centreCropSquare(
   canvas.drawImageRect(source, src, dst, paint);
   if (obscure) {
     canvas.drawRect(dst, Paint()..color = const Color(0x59000000));
+    // The widget veil's eye-off glyph, so a gated tile reads as "hidden"
+    // rather than as a tile that failed to load. Drawn from the bundled
+    // MaterialIcons font.
+    const icon = Icons.visibility_off_outlined;
+    final glyph = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(icon.codePoint),
+        style: TextStyle(
+          fontFamily: icon.fontFamily,
+          fontSize: size * 0.2,
+          color: NexusColors.textPrimary,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    glyph.paint(
+      canvas,
+      Offset((size - glyph.width) / 2, (size - glyph.height) / 2),
+    );
+    glyph.dispose();
   }
   final picture = recorder.endRecording();
   try {

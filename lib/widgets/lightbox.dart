@@ -187,7 +187,7 @@ class _LightboxViewState extends State<LightboxView>
   bool get _adultObscured =>
       widget.image.adult &&
       SettingsService.instance.blurAdult &&
-      !AdultRevealSession.isRevealed(widget.image.id);
+      !AdultRevealSession.instance.isRevealed(widget.image.id);
 
   @override
   void initState() {
@@ -331,7 +331,7 @@ class _LightboxViewState extends State<LightboxView>
                     // closes the lightbox as usual.
                     onTap: _adultObscured
                         ? () => setState(
-                            () => AdultRevealSession.reveal(widget.image.id))
+                            () => AdultRevealSession.instance.reveal(widget.image.id))
                         : _closeLightbox,
                     onDoubleTapDown: (details) =>
                         _lastDoubleTapDetails = details,
@@ -368,23 +368,31 @@ class _LightboxViewState extends State<LightboxView>
                                 ),
                                 // Full-res fades in on top at the exact same
                                 // framing, so it sharpens in rather than
-                                // revealing previously-cropped parts.
-                                CachedNetworkImage(
-                                  imageUrl: image.url,
-                                  fit: BoxFit.contain,
-                                  fadeInDuration:
-                                      const Duration(milliseconds: 280),
-                                  fadeInCurve: Curves.easeOut,
-                                  placeholder: (_, _) =>
-                                      const SizedBox.shrink(),
-                                  errorWidget: (_, _, _) => Icon(
-                                    Icons.broken_image_outlined,
-                                    color: NexusColors.textMuted,
-                                    size: 64,
+                                // revealing previously-cropped parts. Not
+                                // mounted while veiled — the original isn't
+                                // worth fetching until the user asks to see
+                                // it; revealing mounts it and it loads then.
+                                if (!_adultObscured)
+                                  CachedNetworkImage(
+                                    imageUrl: image.url,
+                                    fit: BoxFit.contain,
+                                    fadeInDuration:
+                                        const Duration(milliseconds: 280),
+                                    fadeInCurve: Curves.easeOut,
+                                    placeholder: (_, _) =>
+                                        const SizedBox.shrink(),
+                                    errorWidget: (_, _, _) => Icon(
+                                      Icons.broken_image_outlined,
+                                      color: NexusColors.textMuted,
+                                      size: 64,
+                                    ),
                                   ),
-                                ),
-                                if (_adultObscured)
-                                  const AdultContentVeil(),
+                                if (widget.image.adult &&
+                                    SettingsService.instance.blurAdult)
+                                  AdultContentVeil(
+                                    thumbnailUrl: widget.image.thumbnailUrl,
+                                    revealed: !_adultObscured,
+                                  ),
                               ],
                             ),
                           ),

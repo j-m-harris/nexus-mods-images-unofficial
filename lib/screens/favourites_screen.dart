@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/feed_layout.dart';
 import '../models/nexus_image.dart';
+import '../services/adult_reveal_session.dart';
 import '../services/favourites_service.dart';
 import '../services/settings_service.dart';
 import '../theme.dart';
@@ -68,10 +69,13 @@ class FavouritesScreen extends StatelessWidget {
 
     return ListenableBuilder(
       // Settings matter too: the adult-content toggle changes which
-      // favourites are veiled (list/grid) or hidden (sphere).
-      listenable: Listenable.merge(
-        [FavouritesService.instance, SettingsService.instance],
-      ),
+      // favourites are veiled, and reveals made in the lightbox must unveil
+      // the tile behind it.
+      listenable: Listenable.merge([
+        FavouritesService.instance,
+        SettingsService.instance,
+        AdultRevealSession.instance,
+      ]),
       builder: (context, _) {
         final favourites = FavouritesService.instance.favourites;
         return Column(
