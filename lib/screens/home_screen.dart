@@ -204,13 +204,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openLightbox(NexusImage image) {
+    final index = _images.indexWhere((img) => img.id == image.id);
     Navigator.push(
       context,
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 240),
         reverseTransitionDuration: const Duration(milliseconds: 220),
-        pageBuilder: (_, __, ___) =>
-            LightboxView(image: image, fromFavourites: false),
+        // _images is passed live: _loadNextPage appends to the same list
+        // instance, so the pager can keep swiping into newly fetched pages.
+        pageBuilder: (_, __, ___) => LightboxPager(
+          images: _images,
+          initialIndex: index < 0 ? 0 : index,
+          fromFavourites: false,
+          onRequestMore: _loadNextPage,
+        ),
         transitionsBuilder: (_, animation, __, child) =>
             FadeTransition(opacity: animation, child: child),
       ),

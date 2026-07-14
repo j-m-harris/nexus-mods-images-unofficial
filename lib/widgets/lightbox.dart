@@ -8,6 +8,131 @@ import '../services/image_aspect_cache.dart';
 import '../services/review_service.dart';
 import '../theme.dart';
 
+/// Swipeable full-screen viewer: hosts one [LightboxView] per image in a
+/// [PageView], so swiping left/right moves through the set the image was
+/// opened from (feed or favourites). Paging is suspended while the current
+/// image is zoomed in, so drags pan the image instead of changing page.
+///
+/// When [onRequestMore] is set, approaching the end of [images] asks the
+/// owner to fetch the next page; [images] is expected to grow in place, and
+/// the pager re-reads its length once the fetch completes, so swiping
+/// continues seamlessly into new results.
+class LightboxPager extends StatefulWidget {
+  final List<NexusImage> images;
+  final int initialIndex;
+
+  /// See [LightboxView.fromFavourites]; applies to every page.
+  final bool fromFavourites;
+
+  /// Called when the user swipes near the end of [images]. Should complete
+  /// when the fetch lands (having appended to [images]); no-op futures are
+  /// fine when there is nothing more to load.
+  final Future<void> Function()? onRequestMore;
+
+  const LightboxPager({
+    super.key,
+    required this.images,
+    required this.initialIndex,
+    this.fromFavourites = false,
+    this.onRequestMore,
+  });
+
+  @override
+  State<LightboxPager> createState() => _LightboxPagerState();
+}
+
+class _LightboxPagerState extends State<LightboxPager> {
+  /// How close to the end of the list a page change has to be to trigger
+  /// [LightboxPager.onRequestMore].
+  static const _requestMoreThreshold = 3;
+
+  /// Horizontal fling speed (px/s) that commits to the next/previous page
+  /// regardless of how far the drag got. Matches kMinFlingVelocity's feel.
+  static const _flingVelocity = 365.0;
+
+  late final PageController _pageController =
+      PageController(initialPage: widget.initialIndex);
+  bool _requestingMore = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // The opened image may already be near the end of the loaded set.
+    _maybeRequestMore(widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _maybeRequestMore(int index) {
+    if (widget.onRequestMore == null || _requestingMore) return;
+    if (index < widget.images.length - _requestMoreThreshold) return;
+    _requestingMore = true;
+    widget.onRequestMore!().whenComplete(() {
+      // Rebuild so the PageView picks up the grown list.
+      if (mounted) setState(() => _requestingMore = false);
+    });
+  }
+
+  /// Shifts the strip by a drag delta ([dx] > 0 drags towards the previous
+  /// page), hard-clamped at the ends.
+  void _dragBy(double dx) {
+    final position = _pageController.position;
+    _pageController.jumpTo(
+      (position.pixels - dx)
+          .clamp(position.minScrollExtent, position.maxScrollExtent),
+    );
+  }
+
+  /// Settles the strip on a page once the drag ends: a fling commits to the
+  /// neighbour in its direction, anything slower snaps to the nearest page.
+  void _settle(double velocityX) {
+    final page = _pageController.page;
+    if (page == null) return;
+    final int target;
+    if (velocityX <= -_flingVelocity) {
+      target = page.floor() + 1;
+    } else if (velocityX >= _flingVelocity) {
+      target = page.ceil() - 1;
+    } else {
+      target = page.round();
+    }
+    _pageController.animateToPage(
+      target.clamp(0, widget.images.length - 1),
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // The strip is only ever moved programmatically. Each page's
+    // InteractiveViewer always wins the gesture arena over a scrollable's drag
+    // recognizer (its pan slop loses the race only on slow drags, so fast
+    // flicks would be swallowed) — instead of competing with it, paging is
+    // driven from the viewer's own interaction callbacks via _dragBy/_settle.
+    return PageView.builder(
+      controller: _pageController,
+      physics: const NeverScrollableScrollPhysics(),
+      // Pre-builds the neighbouring pages, so their thumbnails start loading
+      // before the swipe begins.
+      allowImplicitScrolling: true,
+      itemCount: widget.images.length,
+      onPageChanged: _maybeRequestMore,
+      itemBuilder: (context, index) => LightboxView(
+        key: ValueKey(widget.images[index].id),
+        image: widget.images[index],
+        fromFavourites: widget.fromFavourites,
+        onPageDragUpdate: _dragBy,
+        onPageDragEnd: _settle,
+      ),
+    );
+  }
+}
+
 class LightboxView extends StatefulWidget {
   final NexusImage image;
 
@@ -16,10 +141,21 @@ class LightboxView extends StatefulWidget {
   /// from the feed it is a plain save/unsave toggle.
   final bool fromFavourites;
 
+  /// Forwards horizontal drag deltas to the hosting [LightboxPager] while the
+  /// image is at resting zoom (the pager's PageView never handles gestures
+  /// itself — see the note in [_LightboxPagerState.build]).
+  final ValueChanged<double>? onPageDragUpdate;
+
+  /// Companion to [onPageDragUpdate]: reports the gesture's end velocity so
+  /// the pager can settle on a page.
+  final ValueChanged<double>? onPageDragEnd;
+
   const LightboxView({
     super.key,
     required this.image,
     this.fromFavourites = false,
+    this.onPageDragUpdate,
+    this.onPageDragEnd,
   });
 
   @override
@@ -37,6 +173,7 @@ class _LightboxViewState extends State<LightboxView>
   TapDownDetails? _lastDoubleTapDetails;
   double? _imageAspect;
   bool _canSetState = false;
+  bool _draggingPager = false;
   ImageStream? _aspectStream;
   ImageStreamListener? _aspectListener;
 
@@ -87,6 +224,43 @@ class _LightboxViewState extends State<LightboxView>
     Navigator.pop(context);
   }
 
+  /// Whether the current transform is meaningfully away from identity.
+  /// Compared with a tolerance: the double-tap zoom-out animation runs through
+  /// [Matrix4Tween], whose decompose/recompose can land an epsilon off exact
+  /// identity, and an exact comparison would then read as "still zoomed"
+  /// forever, silently disabling page swipes.
+  bool get _transformIsZoomed {
+    const epsilon = 0.001;
+    final m = _transformController.value.storage;
+    for (var i = 0; i < 16; i++) {
+      final identityValue = i % 5 == 0 ? 1.0 : 0.0;
+      if ((m[i] - identityValue).abs() > epsilon) return true;
+    }
+    return false;
+  }
+
+  /// Routes a one-finger drag at resting zoom to the pager. Zoomed images and
+  /// multi-touch gestures stay with the InteractiveViewer (pan/pinch); a drag
+  /// interrupted by a pinch settles the pager back onto a page.
+  void _onInteractionUpdate(ScaleUpdateDetails details) {
+    if (widget.onPageDragUpdate == null) return;
+    if (details.pointerCount > 1 || _transformIsZoomed) {
+      if (_draggingPager) {
+        _draggingPager = false;
+        widget.onPageDragEnd?.call(0);
+      }
+      return;
+    }
+    _draggingPager = true;
+    widget.onPageDragUpdate!(details.focalPointDelta.dx);
+  }
+
+  void _onInteractionEnd(ScaleEndDetails details) {
+    if (!_draggingPager) return;
+    _draggingPager = false;
+    widget.onPageDragEnd?.call(details.velocity.pixelsPerSecond.dx);
+  }
+
   @override
   void dispose() {
     if (_aspectStream != null && _aspectListener != null) {
@@ -98,7 +272,7 @@ class _LightboxViewState extends State<LightboxView>
   }
 
   void _handleDoubleTap() {
-    final isZoomedIn = _transformController.value != Matrix4.identity();
+    final isZoomedIn = _transformIsZoomed;
     final Matrix4 endMatrix;
     if (isZoomedIn) {
       endMatrix = Matrix4.identity();
@@ -148,6 +322,8 @@ class _LightboxViewState extends State<LightboxView>
                     child: InteractiveViewer(
                       transformationController: _transformController,
                       clipBehavior: Clip.none,
+                      onInteractionUpdate: _onInteractionUpdate,
+                      onInteractionEnd: _onInteractionEnd,
                       minScale: 1.0,
                       maxScale: 5.0,
                       child: Center(

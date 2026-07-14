@@ -30,14 +30,25 @@ class FavouritesScreen extends StatelessWidget {
     required this.active,
   });
 
-  void _openLightbox(BuildContext context, NexusImage image) {
+  void _openLightbox(
+    BuildContext context,
+    List<NexusImage> favourites,
+    NexusImage image,
+  ) {
+    final index = favourites.indexWhere((img) => img.id == image.id);
     Navigator.push(
       context,
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 240),
         reverseTransitionDuration: const Duration(milliseconds: 220),
-        pageBuilder: (_, __, ___) =>
-            LightboxView(image: image, fromFavourites: true),
+        // A snapshot of the favourites list: a finite local set, so no
+        // onRequestMore. Removing an image pops the lightbox (as before), so
+        // the snapshot never goes stale on screen.
+        pageBuilder: (_, __, ___) => LightboxPager(
+          images: favourites,
+          initialIndex: index < 0 ? 0 : index,
+          fromFavourites: true,
+        ),
         transitionsBuilder: (_, animation, __, child) =>
             FadeTransition(opacity: animation, child: child),
       ),
@@ -86,7 +97,7 @@ class FavouritesScreen extends StatelessWidget {
         padding: EdgeInsets.only(bottom: bottomInset),
         child: PlanetariumView(
           images: favourites,
-          onImageTap: (image) => _openLightbox(context, image),
+          onImageTap: (image) => _openLightbox(context, favourites, image),
           active: active,
         ),
       );
@@ -107,7 +118,8 @@ class FavouritesScreen extends StatelessWidget {
               delegate: SliverChildBuilderDelegate(
                 (context, index) => ImageGridTile(
                   image: favourites[index],
-                  onTap: () => _openLightbox(context, favourites[index]),
+                  onTap: () =>
+                      _openLightbox(context, favourites, favourites[index]),
                 ),
                 childCount: favourites.length,
               ),
@@ -118,7 +130,8 @@ class FavouritesScreen extends StatelessWidget {
             delegate: SliverChildBuilderDelegate(
               (context, index) => ImageCard(
                 image: favourites[index],
-                onTap: () => _openLightbox(context, favourites[index]),
+                onTap: () =>
+                    _openLightbox(context, favourites, favourites[index]),
               ),
               childCount: favourites.length,
             ),

@@ -5,6 +5,21 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-07-14
+
+### Added
+
+- Swipe between images in the lightbox: swiping left or right moves through
+  the set the image was opened from (the feed or your favourites), and
+  swiping near the end of the feed loads the next page of results so
+  browsing continues seamlessly. Swiping is suspended while zoomed in, so
+  drags pan the image instead; zoom back out (or double-tap) to resume
+  paging.
+- A one-time in-app review prompt: after the fifth image is saved to
+  favourites, the app asks Google Play to show its rate-this-app dialog.
+  The request is only ever made once, and removing favourites does not
+  reset the count.
+
 ## [1.3.0] - 2026-06-28
 
 ### Added

@@ -6,8 +6,10 @@ users of other Android image apps (gallery apps, Reddit/Pinterest-style browsers
 feature, weighted by how cheaply the current code supports it.
 
 Shipped since the last revision: local favourites with their own tab and layouts (1.2.0), share from the lightbox
-(1.3.0), and a persistence layer (`shared_preferences` via `FavouritesService`). Pull-to-refresh also already
-exists on the feed.
+(1.3.0), a persistence layer (`shared_preferences` via `FavouritesService`), the one-time in-app review request
+(fires on the fifth favourite save), and lightbox swiping (swipe left/right through the feed or favourites, with
+seamless paging into new results and zoom-aware gesture handling). Pull-to-refresh also already exists on the
+feed.
 
 Code-quality and performance follow-ups live in `RECOMMENDATIONS.md` and `PERFORMANCE_NOTES.md`; this file is
 product features only.
@@ -16,11 +18,6 @@ product features only.
 
 Things users will reach for instinctively because every comparable Android app has them.
 
-- **Swipe between images in the lightbox.** The single most-expected missing behaviour: in every gallery-style
-  app, opening an image and swiping left/right moves through the set. `LightboxView` takes one `NexusImage`;
-  wrap it in a `PageView` over the current result list (feed, favourites, or grid) with the zoom controller reset
-  per page. Near the end of the list, request the next feed page so swiping continues seamlessly. The aspect
-  cache and thumbnail-first crossfade already make each page cheap to show.
 - **Download to device.** Share currently sends the page URL only. Add a Download action that saves the
   full-resolution file to `Pictures/Nexus Mods` via MediaStore (no storage permission needed on API 29+), with a
   snackbar linking to the saved copy. While there, offer "share image" (the actual file via `share_plus`) next to
@@ -94,9 +91,8 @@ art feed can genuinely stand out.
 
 ## Suggested order
 
-1. Lightbox swiping — most-expected gap, no new dependencies, improves every browsing surface at once.
-2. Download + share-image, and preference persistence — small, independent, high-visibility wins.
-3. Settings screen with the adult-content gate — unblocks store submission and hosts everything later.
-4. Set-as-wallpaper, then daily rotation — the differentiating pair; do it after settings exists so rotation has
+1. Download + share-image, and preference persistence — small, independent, high-visibility wins.
+2. Settings screen with the adult-content gate — unblocks store submission and hosts everything later.
+3. Set-as-wallpaper, then daily rotation — the differentiating pair; do it after settings exists so rotation has
    a home for its options.
-5. Search history, author view and followed games — the discovery cluster, in whichever order feedback favours.
+4. Search history, author view and followed games — the discovery cluster, in whichever order feedback favours.
