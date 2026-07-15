@@ -4,6 +4,7 @@ import '../models/nexus_image.dart';
 import '../services/adult_reveal_session.dart';
 import '../services/settings_service.dart';
 import '../theme.dart';
+import 'adult_confirmation_dialog.dart';
 import 'adult_content_veil.dart';
 
 /// A lightweight square thumbnail tile for the alternative grid layout.
@@ -33,6 +34,13 @@ class _ImageGridTileState extends State<ImageGridTile> {
       SettingsService.instance.blurAdult &&
       !AdultRevealSession.instance.isRevealed(widget.image.id);
 
+  /// The first reveal anywhere asks the one-time 18+ confirmation.
+  Future<void> _revealAdult() async {
+    if (!await ensureAdultConfirmed(context)) return;
+    if (!mounted) return;
+    setState(() => AdultRevealSession.instance.reveal(widget.image.id));
+  }
+
   @override
   Widget build(BuildContext context) {
     final image = widget.image;
@@ -43,9 +51,7 @@ class _ImageGridTileState extends State<ImageGridTile> {
     return GestureDetector(
       // While veiled, the first tap reveals; only then does a tap open the
       // lightbox.
-      onTap: _adultObscured
-          ? () => setState(() => AdultRevealSession.instance.reveal(widget.image.id))
-          : widget.onTap,
+      onTap: _adultObscured ? _revealAdult : widget.onTap,
       child: Stack(
         fit: StackFit.expand,
         children: [

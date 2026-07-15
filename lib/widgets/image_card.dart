@@ -9,6 +9,7 @@ import '../services/adult_reveal_session.dart';
 import '../services/image_aspect_cache.dart';
 import '../services/settings_service.dart';
 import '../theme.dart';
+import 'adult_confirmation_dialog.dart';
 import 'adult_content_veil.dart';
 
 class ImageCard extends StatefulWidget {
@@ -178,8 +179,11 @@ class _ImageCardState extends State<ImageCard> {
 
   /// Reveals the image and starts the full-res upgrade that the veil was
   /// holding back — the card is visible (it was just tapped), but no
-  /// visibility change will fire to start it otherwise.
-  void _revealAdult() {
+  /// visibility change will fire to start it otherwise. The first reveal
+  /// anywhere asks the one-time 18+ confirmation.
+  Future<void> _revealAdult() async {
+    if (!await ensureAdultConfirmed(context)) return;
+    if (!mounted) return;
     setState(() => AdultRevealSession.instance.reveal(widget.image.id));
     _startUpgradeTimer();
   }

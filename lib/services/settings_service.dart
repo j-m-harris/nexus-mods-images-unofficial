@@ -33,10 +33,12 @@ class SettingsService extends ChangeNotifier {
   static final SettingsService instance = SettingsService._();
 
   static const _adultModeKey = 'settings.adultContentMode';
+  static const _adultConfirmedKey = 'settings.adultConfirmed';
   static const _feedLayoutKey = 'settings.feedLayout';
 
   SharedPreferences? _prefs;
   AdultContentMode _adultMode = AdultContentMode.blur;
+  bool _adultConfirmed = false;
   FeedLayout _feedLayout = FeedLayout.list;
 
   /// Loads persisted settings. Safe to call more than once; only the first
@@ -49,11 +51,22 @@ class SettingsService extends ChangeNotifier {
       (mode) => mode.storageValue == stored,
       orElse: () => AdultContentMode.blur,
     );
+    _adultConfirmed = _prefs?.getBool(_adultConfirmedKey) ?? false;
     final storedLayout = _prefs?.getString(_feedLayoutKey);
     _feedLayout = FeedLayout.values.firstWhere(
       (layout) => layout.storageValue == storedLayout,
       orElse: () => FeedLayout.list,
     );
+  }
+
+  /// Whether the user has ever confirmed they are 18+ (see
+  /// `ensureAdultConfirmed`). One-shot: once set it is never asked again.
+  bool get adultConfirmed => _adultConfirmed;
+
+  Future<void> confirmAdult() async {
+    if (_adultConfirmed) return;
+    _adultConfirmed = true;
+    await _prefs?.setBool(_adultConfirmedKey, true);
   }
 
   AdultContentMode get adultMode => _adultMode;

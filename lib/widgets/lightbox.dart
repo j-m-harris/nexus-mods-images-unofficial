@@ -9,6 +9,7 @@ import '../services/image_aspect_cache.dart';
 import '../services/review_service.dart';
 import '../services/settings_service.dart';
 import '../theme.dart';
+import 'adult_confirmation_dialog.dart';
 import 'adult_content_veil.dart';
 
 /// Swipeable full-screen viewer: hosts one [LightboxView] per image in a
@@ -307,8 +308,11 @@ class _LightboxViewState extends State<LightboxView>
   }
 
   /// Reveals the veiled image, shared with the listings via
-  /// [AdultRevealSession] so the tile behind unveils too.
-  void _revealAdult() {
+  /// [AdultRevealSession] so the tile behind unveils too. The first reveal
+  /// anywhere asks the one-time 18+ confirmation.
+  Future<void> _revealAdult() async {
+    if (!await ensureAdultConfirmed(context)) return;
+    if (!mounted) return;
     setState(() => AdultRevealSession.instance.reveal(widget.image.id));
   }
 

@@ -6,6 +6,7 @@ import '../services/adult_reveal_session.dart';
 import '../services/nexus_api.dart';
 import '../services/settings_service.dart';
 import '../theme.dart';
+import '../widgets/adult_confirmation_dialog.dart';
 import '../widgets/image_card.dart';
 import '../widgets/image_grid_tile.dart';
 import '../widgets/planetarium_view.dart';
@@ -313,10 +314,15 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               RadioGroup<AdultContentMode>(
                 groupValue: SettingsService.instance.adultMode,
-                onChanged: (mode) {
-                  if (mode != null) {
-                    SettingsService.instance.setAdultMode(mode);
+                onChanged: (mode) async {
+                  if (mode == null) return;
+                  // Show displays adult images unveiled, so the first switch
+                  // to it needs the one-time 18+ confirmation.
+                  if (mode == AdultContentMode.show &&
+                      !await ensureAdultConfirmed(ctx)) {
+                    return;
                   }
+                  SettingsService.instance.setAdultMode(mode);
                 },
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

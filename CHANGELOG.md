@@ -5,6 +5,26 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2026-07-15
+
+### Added
+
+- The listing layout (list, grid or sphere) is now remembered across app
+  restarts, for both the feed and favourites.
+- A one-time 18+ confirmation before adult content is first shown: picking
+  **Show** in settings or tapping to reveal a blurred image asks once.
+  Accepting is remembered permanently; declining leaves the image veiled
+  and the setting unchanged, and the question is asked again next time.
+
+### Fixed
+
+- The system back button no longer exits the app (or leaves a blank
+  screen) when closing the lightbox; it now returns to the feed or
+  favourites as expected.
+- Double-tapping a still-veiled image in the lightbox no longer zooms
+  into the blur: a double tap now reveals the image, pinch-zoom is
+  disabled while veiled, and zooming unlocks once the image is revealed.
+
 ## [1.4.1] - 2026-07-14
 
 ### Fixed
